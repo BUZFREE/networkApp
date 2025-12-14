@@ -78,10 +78,10 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
 
     6. HTTP HEADERS & PERFORMANCE:
        - If 'Security Headers' selected: Generate 'securityHeaders'.
-       - If 'Lighthouse' selected: Generate 'performanceReport'.
+       - If 'Google Lighthouse' selected: Generate 'performanceReport'.
 
     7. PACKET ANALYSIS & FORENSICS (WIRESHARK & DPI):
-       - If 'Wireshark Analysis' is selected, Generate 'packetCapture' array (approx 15-20 packets). Sequence: DNS -> TCP Handshake -> HTTP GET -> TLS Handshake.
+       - If 'Wireshark Traffic Analysis' is selected, Generate 'packetCapture' array (approx 15-20 packets). Sequence: DNS -> TCP Handshake -> HTTP GET -> TLS Handshake.
        - If 'Network Forensics / DPI' is selected, YOU MUST Generate 'forensicsReport'.
           - 'protocolStats': Realistic distribution (e.g. TCP 40%, TLS 30%, HTTP 20%, DNS 10%).
           - 'expertIssues': Generate Wireshark-style Expert Infos (e.g. "TCP Retransmission", "Suspected SQL Injection", "Zero Window").

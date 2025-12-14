@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, LineChart, Line, BarChart, Bar } from 'recharts';
-import { AlertTriangle, Server, ShieldCheck, Terminal, Download, Globe, Network, Zap, Cpu, Activity, Lock, Search, Share2, Map, Smartphone, Check, XCircle, FileText, Bot, PlayCircle, BarChart2, Layers, Wifi, FileCode, AlertOctagon, AlignLeft } from 'lucide-react';
+import { AlertTriangle, Server, ShieldCheck, Terminal, Download, Globe, Network, Zap, Cpu, Activity, Lock, Search, Share2, Map, Smartphone, Check, XCircle, FileText, Bot, PlayCircle, BarChart2, Layers, Wifi, FileCode, AlertOctagon, AlignLeft, ExternalLink } from 'lucide-react';
 import { ScanResult, Severity, NetworkPacket } from '../types';
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
@@ -26,6 +26,27 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
   const [selectedPacket, setSelectedPacket] = useState<NetworkPacket | null>(null);
   const [showForensics, setShowForensics] = useState(false);
+  const [geoData, setGeoData] = useState<any>(null);
+
+  useEffect(() => {
+    // Fetch rich geo data for the primary IP
+    const primaryAsset = result.connectedAssets.find(a => a.type === 'Primary');
+    const targetIp = primaryAsset?.ip || result.connectedAssets[0]?.ip || result.targetIp;
+    
+    // Basic private IP check
+    const isPrivate = /^(127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(targetIp);
+
+    if (targetIp && !isPrivate && !geoData) {
+        fetch(`https://ipwho.is/${targetIp}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    setGeoData(data);
+                }
+            })
+            .catch(err => console.error("Geo fetch error:", err));
+    }
+  }, [result, geoData]);
 
   const severityCounts = result.vulnerabilities.reduce((acc, curr) => {
     acc[curr.severity] = (acc[curr.severity] || 0) + 1;
@@ -528,9 +549,20 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 
             {/* Overview Quick View of IPs */}
             <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
-                <h3 className="text-lg font-semibold mb-4 text-white flex items-center">
-                    <Globe className="mr-2 text-blue-400" size={18} /> IPs & Actifs Connectés
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center">
+                        <Globe className="mr-2 text-blue-400" size={18} /> IPs & Actifs Connectés
+                    </h3>
+                    <a 
+                        href={`https://iplocation.io/ip/${result.connectedAssets[0]?.ip || result.targetIp || ''}`}
+                        target="_blank"
+                        rel="noopener noreferrer" 
+                        className="text-xs flex items-center text-secondary hover:text-white transition-colors"
+                        title="Vérifier la géolocalisation sur IPLocation.io"
+                    >
+                        <ExternalLink size={12} className="mr-1" /> IPLocation.io
+                    </a>
+                </div>
                 {result.connectedAssets && result.connectedAssets.length > 0 ? (
                     <div className="space-y-3 max-h-[250px] overflow-y-auto">
                         {result.connectedAssets.slice(0, 5).map((asset, idx) => (
@@ -712,26 +744,47 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                   </h3>
                   {result.connectedAssets && result.connectedAssets.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {result.connectedAssets.map((asset, idx) => (
-                              <div key={idx} className="p-4 bg-slate-900 rounded border border-slate-800 flex items-center justify-between hover:border-slate-600 transition-colors">
-                                  <div>
-                                      <p className="font-bold text-white text-sm">{asset.hostname}</p>
-                                      <p className="text-xs text-secondary font-mono mt-1">{asset.ip}</p>
+                          {result.connectedAssets.map((asset, idx) => {
+                              const isEnriched = geoData && geoData.ip === asset.ip;
+                              return (
+                                  <div key={idx} className="p-4 bg-slate-900 rounded border border-slate-800 flex items-center justify-between hover:border-slate-600 transition-colors">
+                                      <div>
+                                          <p className="font-bold text-white text-sm">{asset.hostname}</p>
+                                          <p className="text-xs text-secondary font-mono mt-1 flex items-center">
+                                              {asset.ip}
+                                              <a href={`https://iplocation.io/ip/${asset.ip}`} target="_blank" rel="noopener noreferrer" className="ml-2 opacity-50 hover:opacity-100 text-blue-400" title="Vérifier sur IPLocation.io">
+                                                  <ExternalLink size={10} />
+                                              </a>
+                                          </p>
+                                      </div>
+                                      <div className="text-right">
+                                          <span className={`text-[10px] uppercase px-2 py-1 rounded border ${
+                                              asset.type === 'Primary' ? 'bg-primary/20 text-primary border-primary/30' : 
+                                              asset.type === 'Database' ? 'bg-orange-500/20 text-orange-500 border-orange-500/30' :
+                                              'bg-slate-800 text-gray-400 border-slate-700'
+                                          }`}>
+                                              {asset.type}
+                                          </span>
+                                          <div className="mt-2 flex flex-col items-end">
+                                              {isEnriched ? (
+                                                  <div className="text-right animate-in fade-in duration-500">
+                                                      <p className="text-xs text-white font-bold flex items-center justify-end">
+                                                          {geoData.flag?.img && <img src={geoData.flag.img} alt="flag" className="w-4 h-auto mr-1.5 shadow-sm" />}
+                                                          {geoData.city}
+                                                      </p>
+                                                      <p className="text-[10px] text-gray-400">{geoData.region}, {geoData.country}</p>
+                                                      {geoData.connection?.isp && <p className="text-[9px] text-slate-500 mt-0.5 font-mono">{geoData.connection.isp}</p>}
+                                                  </div>
+                                              ) : (
+                                                  <p className="text-[10px] text-gray-500 flex items-center justify-end">
+                                                      <Map size={10} className="mr-1"/> {asset.location}
+                                                  </p>
+                                              )}
+                                          </div>
+                                      </div>
                                   </div>
-                                  <div className="text-right">
-                                      <span className={`text-[10px] uppercase px-2 py-1 rounded border ${
-                                          asset.type === 'Primary' ? 'bg-primary/20 text-primary border-primary/30' : 
-                                          asset.type === 'Database' ? 'bg-orange-500/20 text-orange-500 border-orange-500/30' :
-                                          'bg-slate-800 text-gray-400 border-slate-700'
-                                      }`}>
-                                          {asset.type}
-                                      </span>
-                                      <p className="text-[10px] text-gray-500 mt-2 flex items-center justify-end">
-                                          <Map size={10} className="mr-1"/> {asset.location}
-                                      </p>
-                                  </div>
-                              </div>
-                          ))}
+                              );
+                          })}
                       </div>
                   ) : (
                       <div className="text-center py-8 text-gray-500 italic flex flex-col items-center">
@@ -1392,7 +1445,8 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                         <XAxis dataKey="timestamp" stroke="#94a3b8" tick={{fontSize: 14}} />
                         <YAxis stroke="#94a3b8" tick={{fontSize: 14}} />
                         <Legend wrapperStyle={{ fontSize: '18px' }} />
-                        <Area type="monotone" dataKey="throughput" stroke="#10b981" fill="#10b981" fillOpacity={0.3} isAnimationActive={false} strokeWidth={3} />
+                        <Area type="monotone" dataKey="throughput" stroke="#10b981" fillOpacity={1} fill="url(#colorThroughput)" name="Throughput (req/s)" />
+                        <Line type="monotone" dataKey="activeThreads" stroke="#f59e0b" strokeDasharray="3 3" dot={false} name="Active Threads" />
                     </AreaChart>
                 </ResponsiveContainer>
              )}
