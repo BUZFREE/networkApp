@@ -39,9 +39,10 @@ const toolsList = [
   { id: ToolType.SELENIUM, name: 'Selenium Tests', desc: 'Automation E2E & Form Fuzzing' },
   { id: ToolType.JMETER, name: 'Apache JMeter', desc: 'Test de charge & Stress Test' },
   
-  // Wireshark & Forensics
+  // Wireshark & Forensics & IDS
   { id: ToolType.WIRESHARK, name: 'Wireshark Analysis', desc: 'Capture de paquets & Analyse protocolaire' },
   { id: ToolType.FORENSICS, name: 'Network Forensics / DPI', desc: 'Expert Info, Reconstruction de Flux & Stats' },
+  { id: ToolType.SNORT_SURICATA, name: 'Snort / Suricata (IDS)', desc: 'Détection d\'intrusion, Signatures & Alertes' },
 ];
 
 const ScannerForm: React.FC<ScannerFormProps> = ({ onStartScan, isScanning }) => {
@@ -57,7 +58,8 @@ const ScannerForm: React.FC<ScannerFormProps> = ({ onStartScan, isScanning }) =>
       ToolType.SELENIUM,
       ToolType.JMETER,
       ToolType.WIRESHARK,
-      ToolType.FORENSICS
+      ToolType.FORENSICS,
+      ToolType.SNORT_SURICATA
   ]);
   const [intensity, setIntensity] = useState<ScanRequest['intensity']>('normal');
 

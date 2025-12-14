@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, LineChart, Line, BarChart, Bar } from 'recharts';
-import { AlertTriangle, Server, ShieldCheck, Terminal, Download, Globe, Network, Zap, Cpu, Activity, Lock, Search, Share2, Map, Smartphone, Check, XCircle, FileText, Bot, PlayCircle, BarChart2, Layers, Wifi, FileCode, AlertOctagon, AlignLeft, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Server, ShieldCheck, Terminal, Download, Globe, Network, Zap, Cpu, Activity, Lock, Search, Share2, Map, Smartphone, Check, XCircle, FileText, Bot, PlayCircle, BarChart2, Layers, Wifi, FileCode, AlertOctagon, AlignLeft, ExternalLink, Siren } from 'lucide-react';
 import { ScanResult, Severity, NetworkPacket } from '../types';
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
@@ -20,7 +20,7 @@ const COLORS = {
 };
 
 const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'infrastructure' | 'network' | 'topology' | 'selenium' | 'jmeter' | 'traffic'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'infrastructure' | 'network' | 'topology' | 'selenium' | 'jmeter' | 'traffic' | 'ids'>('overview');
   const [isExporting, setIsExporting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
@@ -490,7 +490,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 
       {/* Tabs */}
       <div className="border-b border-slate-700 flex space-x-6 overflow-x-auto">
-          {['overview', 'infrastructure', 'network', 'topology', 'selenium', 'jmeter', 'traffic'].map((tab) => (
+          {['overview', 'infrastructure', 'network', 'topology', 'selenium', 'jmeter', 'traffic', 'ids'].map((tab) => (
              <button 
                key={tab}
                onClick={() => setActiveTab(tab as any)} 
@@ -502,6 +502,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                 tab === 'selenium' ? 'Automatisation' : 
                 tab === 'jmeter' ? 'Test de Charge' : 
                 tab === 'traffic' ? 'Trafic Réseau' : 
+                tab === 'ids' ? 'IDS / IPS' : 
                 tab}
              </button>
           ))}
@@ -622,6 +623,117 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* IDS / IPS TAB (NEW) */}
+      {activeTab === 'ids' && (
+          <div className="space-y-6 animate-fade-in">
+             <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-lg font-semibold text-white flex items-center">
+                      <Siren className="mr-3 text-red-500" size={24} /> 
+                      Intrusion Detection System (Snort / Suricata)
+                   </h3>
+                   {result.idsReport && (
+                       <div className="flex space-x-4">
+                           <span className="bg-red-500/10 text-red-500 px-3 py-1 rounded border border-red-500/20 text-sm font-bold">
+                               {result.idsReport.alertsByPriority.high} High Priority
+                           </span>
+                           <span className="bg-slate-800 text-gray-300 px-3 py-1 rounded border border-slate-600 text-sm">
+                               {result.idsReport.totalAlerts} Alerts Total
+                           </span>
+                       </div>
+                   )}
+                </div>
+
+                {!result.idsReport ? (
+                    <div className="text-center py-12">
+                        <Siren size={48} className="mx-auto text-gray-600 mb-4" />
+                        <p className="text-gray-400">Aucun rapport IDS disponible.</p>
+                        <p className="text-sm text-gray-500 mt-2">Activez l'outil "Snort / Suricata" lors de la configuration.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Stats Summary */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-slate-900 p-4 rounded-lg border border-slate-800 flex justify-between items-center">
+                                <div>
+                                    <p className="text-gray-400 text-xs uppercase font-bold">Total Events</p>
+                                    <p className="text-2xl font-bold text-white mt-1">{result.idsReport.totalAlerts}</p>
+                                </div>
+                                <Activity className="text-blue-500 opacity-50" />
+                            </div>
+                            <div className="bg-slate-900 p-4 rounded-lg border border-slate-800 flex justify-between items-center">
+                                <div>
+                                    <p className="text-gray-400 text-xs uppercase font-bold">Blocked Attacks</p>
+                                    <p className="text-2xl font-bold text-green-500 mt-1">{result.idsReport.blockedCount}</p>
+                                </div>
+                                <ShieldCheck className="text-green-500 opacity-50" />
+                            </div>
+                            <div className="bg-slate-900 p-4 rounded-lg border border-slate-800 flex justify-between items-center">
+                                <div>
+                                    <p className="text-gray-400 text-xs uppercase font-bold">Critical Alerts</p>
+                                    <p className="text-2xl font-bold text-red-500 mt-1">{result.idsReport.alertsByPriority.high}</p>
+                                </div>
+                                <AlertOctagon className="text-red-500 opacity-50" />
+                            </div>
+                        </div>
+
+                        {/* Alerts Table */}
+                        <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-800 text-gray-400 font-mono text-xs uppercase">
+                                        <tr>
+                                            <th className="p-3">Time</th>
+                                            <th className="p-3">Pri</th>
+                                            <th className="p-3">Signature / Classification</th>
+                                            <th className="p-3">Source</th>
+                                            <th className="p-3">Dest</th>
+                                            <th className="p-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800">
+                                        {result.idsReport.alerts.map((alert, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
+                                                <td className="p-3 text-gray-400 whitespace-nowrap font-mono text-xs">{alert.timestamp}</td>
+                                                <td className="p-3">
+                                                    <span className={`
+                                                        w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs
+                                                        ${alert.priority === 1 ? 'bg-red-500 text-white' : alert.priority === 2 ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}
+                                                    `}>
+                                                        {alert.priority}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3">
+                                                    <div className="font-bold text-white text-xs md:text-sm">{alert.signature}</div>
+                                                    <div className="text-xs text-gray-500 mt-0.5 font-mono">{alert.classification} (SID: {alert.sid})</div>
+                                                </td>
+                                                <td className="p-3 font-mono text-xs text-gray-300">
+                                                    {alert.sourceIp}:{alert.sourcePort}
+                                                </td>
+                                                <td className="p-3 font-mono text-xs text-gray-300">
+                                                    {alert.destIp}:{alert.destPort}
+                                                </td>
+                                                <td className="p-3 text-center">
+                                                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded border ${
+                                                        alert.action === 'blocked' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                                                        alert.action === 'allowed' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
+                                                        'bg-gray-700 text-gray-300 border-gray-600'
+                                                    }`}>
+                                                        {alert.action}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+             </div>
+          </div>
       )}
 
       {/* INFRASTRUCTURE TAB */}
@@ -1461,6 +1573,6 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 // Helper for Selenium Icon (CheckCircle used in code but imported manually to avoid collision)
 const CheckCircle = ({size, className}: {size: number, className: string}) => (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-);
+  );
 
 export default ResultsView;

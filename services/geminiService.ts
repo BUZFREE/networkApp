@@ -87,7 +87,16 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
           - 'expertIssues': Generate Wireshark-style Expert Infos (e.g. "TCP Retransmission", "Suspected SQL Injection", "Zero Window").
           - 'reconstructedStreams': Generate a text block representing a reconstructed TCP stream (Follow TCP Stream). Make it look like a raw HTTP request/response. Example: "POST /login HTTP/1.1\nHost: ${request.target}\n\nusername=admin&password=' OR 1=1--".
 
-    IMPORTANT: ensure all arrays (loadTestResults, jmeterReport.samples, globalPing, packetCapture, forensicsReport.reconstructedStreams) are populated with data if tool selected.
+    8. INTRUSION DETECTION (SNORT / SURICATA):
+       - If 'Snort / Suricata (IDS)' is selected, YOU MUST Generate 'idsReport'.
+       - Create a list of 5-8 alerts including:
+         - 'ET POLICY PE EXE or DLL Windows file download' (Priority 2)
+         - 'GPL ATTACK_RESPONSE id check returned root' (Priority 1)
+         - 'ET SCAN Nmap Scripting Engine User-Agent' (Priority 3)
+         - 'ET WEB_SERVER Possible SQL Injection Attempt' (Priority 1)
+       - Include realistic SIDs, Classifications, and IPs.
+
+    IMPORTANT: ensure all arrays (loadTestResults, jmeterReport.samples, globalPing, packetCapture, forensicsReport.reconstructedStreams, idsReport.alerts) are populated with data if tool selected.
     Be realistic.
   `;
 
@@ -404,6 +413,42 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
                   }
               }
           }
+      },
+      // IDS / IPS Report
+      idsReport: {
+          type: Type.OBJECT,
+          nullable: true,
+          properties: {
+              totalAlerts: { type: Type.NUMBER },
+              alertsByPriority: {
+                  type: Type.OBJECT,
+                  properties: {
+                      high: { type: Type.NUMBER },
+                      medium: { type: Type.NUMBER },
+                      low: { type: Type.NUMBER }
+                  }
+              },
+              blockedCount: { type: Type.NUMBER },
+              alerts: {
+                  type: Type.ARRAY,
+                  items: {
+                      type: Type.OBJECT,
+                      properties: {
+                          timestamp: { type: Type.STRING },
+                          sid: { type: Type.STRING },
+                          signature: { type: Type.STRING },
+                          classification: { type: Type.STRING },
+                          priority: { type: Type.NUMBER },
+                          protocol: { type: Type.STRING },
+                          sourceIp: { type: Type.STRING },
+                          sourcePort: { type: Type.NUMBER },
+                          destIp: { type: Type.STRING },
+                          destPort: { type: Type.NUMBER },
+                          action: { type: Type.STRING, enum: ['allowed', 'blocked', 'logged'] }
+                      }
+                  }
+              }
+          }
       }
     },
     required: ["targetIp", "overallScore", "aiAnalysis", "openPorts", "vulnerabilities"]
@@ -440,7 +485,8 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
       securityHeaders: parsedData.securityHeaders || [],
       globalPing: parsedData.globalPing || [],
       packetCapture: parsedData.packetCapture || [],
-      forensicsReport: parsedData.forensicsReport || undefined
+      forensicsReport: parsedData.forensicsReport || undefined,
+      idsReport: parsedData.idsReport || undefined
     };
 
   } catch (error) {

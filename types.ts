@@ -1,4 +1,5 @@
 
+
 export enum Severity {
   CRITICAL = 'CRITIQUE',
   HIGH = 'ÉLEVÉE',
@@ -29,7 +30,8 @@ export enum ToolType {
   SELENIUM = 'Selenium Automation',
   JMETER = 'Apache JMeter',
   WIRESHARK = 'Wireshark Traffic Analysis',
-  FORENSICS = 'Network Forensics / DPI'
+  FORENSICS = 'Network Forensics / DPI',
+  SNORT_SURICATA = 'Snort / Suricata (IDS/IPS)'
 }
 
 export interface Vulnerability {
@@ -228,6 +230,28 @@ export interface ForensicsReport {
     reconstructedStreams: ReconstructedStream[];
 }
 
+// New: IDS / IPS (Snort/Suricata)
+export interface IdsAlert {
+    timestamp: string;
+    sid: string; // Signature ID e.g. "1:2001219"
+    signature: string; // e.g. "ET POLICY PE EXE or DLL Windows file download"
+    classification: string; // e.g. "Potential Corporate Privacy Violation"
+    priority: number; // 1 (High), 2 (Medium), 3 (Low)
+    protocol: string;
+    sourceIp: string;
+    sourcePort: number;
+    destIp: string;
+    destPort: number;
+    action: 'allowed' | 'blocked' | 'logged';
+}
+
+export interface IdsReport {
+    totalAlerts: number;
+    alertsByPriority: { high: number, medium: number, low: number };
+    blockedCount: number;
+    alerts: IdsAlert[];
+}
+
 export interface ScanResult {
   id: string;
   projectName?: string;
@@ -259,6 +283,9 @@ export interface ScanResult {
   
   // Forensics
   forensicsReport?: ForensicsReport;
+  
+  // IDS/IPS
+  idsReport?: IdsReport;
 }
 
 export interface ScanRequest {
