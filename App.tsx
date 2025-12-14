@@ -69,7 +69,9 @@ const DashboardContent: React.FC<{
                         className="p-3 bg-slate-900 rounded border border-slate-800 hover:border-slate-600 cursor-pointer flex justify-between items-center"
                      >
                         <div>
-                           <p className="font-medium text-white">{scan.targetUrl}</p>
+                           <p className="font-medium text-white">
+                              {scan.projectName ? `${scan.projectName} - ` : ''}{scan.targetUrl}
+                           </p>
                            <p className="text-xs text-gray-500">{new Date(scan.timestamp).toLocaleString()}</p>
                         </div>
                         <div className={`px-2 py-1 rounded text-xs font-bold ${
@@ -142,7 +144,10 @@ const ReportPageWrapper = ({ scans }: { scans: ScanResult[] }) => {
          <div className="flex items-center justify-between mb-8">
             <div>
                <h1 className="text-3xl font-bold text-white mb-2">Rapport de Sécurité</h1>
-               <p className="text-gray-400 font-mono">{scan.targetUrl} • {new Date(scan.timestamp).toLocaleString()}</p>
+               <p className="text-gray-400 font-mono">
+                  {scan.projectName && <span className="text-primary font-bold mr-2">[{scan.projectName}]</span>}
+                  {scan.targetUrl} • {new Date(scan.timestamp).toLocaleString()}
+               </p>
             </div>
             <div className={`px-4 py-2 rounded-lg border flex items-center space-x-2 ${
                scan.status === 'running' ? 'border-blue-500 text-blue-500 animate-pulse' :
@@ -243,7 +248,10 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                      {expandedRow === scan.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                  </button>
                               </td>
-                              <td className="p-4 font-medium text-white">{scan.targetUrl}</td>
+                              <td className="p-4 font-medium text-white">
+                                 {scan.projectName && <span className="block text-xs text-secondary">{scan.projectName}</span>}
+                                 {scan.targetUrl}
+                              </td>
                               <td className="p-4 text-gray-400 text-sm">{new Date(scan.timestamp).toLocaleDateString()}</td>
                               <td className="p-4">
                                   {scan.status === 'completed' ? (
@@ -370,8 +378,10 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                                    <div key={vuln.id} className="bg-slate-900 border border-slate-700 rounded p-2">
                                                       <div className="flex justify-between items-start mb-1">
                                                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                                                            vuln.severity === Severity.CRITICAL ? 'bg-red-500/20 text-red-500' :
-                                                            vuln.severity === Severity.HIGH ? 'bg-orange-500/20 text-orange-500' :
+                                                            vuln.severity === Severity.CRITICAL ? 'bg-red-600/20 text-red-600' :
+                                                            vuln.severity === Severity.HIGH ? 'bg-red-500/20 text-red-500' :
+                                                            vuln.severity === Severity.MEDIUM ? 'bg-orange-500/20 text-orange-500' :
+                                                            vuln.severity === Severity.LOW ? 'bg-green-500/20 text-green-500' :
                                                             'bg-blue-500/20 text-blue-500'
                                                          }`}>
                                                             {vuln.severity}
@@ -438,6 +448,7 @@ const App = () => {
     const tempId = Date.now().toString();
     const tempScan: ScanResult = {
         id: tempId,
+        projectName: request.projectName,
         targetUrl: request.target,
         targetIp: "...",
         timestamp: new Date().toISOString(),
@@ -470,6 +481,7 @@ const App = () => {
         ...tempScan,
         ...partialResult, // This overwrites the temp data with AI data
         id: tempId, // Keep same ID
+        projectName: request.projectName, // Keep project name
         targetUrl: request.target, // Ensure target is kept
         timestamp: new Date().toISOString(),
         status: 'completed',

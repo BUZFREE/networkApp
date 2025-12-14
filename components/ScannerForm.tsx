@@ -14,6 +14,7 @@ const toolsList = [
   { id: ToolType.NIKTO, name: 'Nikto', desc: 'Scanner de serveur web et config' },
   { id: ToolType.OPENVAS, name: 'OpenVAS', desc: 'Gestion complète des vulnérabilités' },
   { id: ToolType.OWASP_ZAP, name: 'OWASP ZAP', desc: 'Scanner web applicatif intégré' },
+  { id: ToolType.SSL_LABS, name: 'SSL Labs', desc: 'Analyse configuration SSL/TLS & Certificats' },
   
   // App Specific
   { id: ToolType.SQLMAP, name: 'SQLMap', desc: 'Détection d\'injections SQL' },
@@ -37,9 +38,14 @@ const toolsList = [
   // New: Functional & Load Testing
   { id: ToolType.SELENIUM, name: 'Selenium Tests', desc: 'Automation E2E & Form Fuzzing' },
   { id: ToolType.JMETER, name: 'Apache JMeter', desc: 'Test de charge & Stress Test' },
+  
+  // Wireshark & Forensics
+  { id: ToolType.WIRESHARK, name: 'Wireshark Analysis', desc: 'Capture de paquets & Analyse protocolaire' },
+  { id: ToolType.FORENSICS, name: 'Network Forensics / DPI', desc: 'Expert Info, Reconstruction de Flux & Stats' },
 ];
 
 const ScannerForm: React.FC<ScannerFormProps> = ({ onStartScan, isScanning }) => {
+  const [projectName, setProjectName] = useState('');
   const [target, setTarget] = useState('');
   const [selectedTools, setSelectedTools] = useState<ToolType[]>([
       ToolType.NMAP, 
@@ -49,7 +55,9 @@ const ScannerForm: React.FC<ScannerFormProps> = ({ onStartScan, isScanning }) =>
       ToolType.TOPOLOGY,
       ToolType.GLOBAL_PING,
       ToolType.SELENIUM,
-      ToolType.JMETER
+      ToolType.JMETER,
+      ToolType.WIRESHARK,
+      ToolType.FORENSICS
   ]);
   const [intensity, setIntensity] = useState<ScanRequest['intensity']>('normal');
 
@@ -64,7 +72,7 @@ const ScannerForm: React.FC<ScannerFormProps> = ({ onStartScan, isScanning }) =>
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!target || selectedTools.length === 0) return;
-    onStartScan({ target, tools: selectedTools, intensity });
+    onStartScan({ target, tools: selectedTools, intensity, projectName });
   };
 
   return (
@@ -75,6 +83,22 @@ const ScannerForm: React.FC<ScannerFormProps> = ({ onStartScan, isScanning }) =>
       </h2>
       
       <form onSubmit={handleSubmit} className="space-y-8">
+        
+        {/* Project Name Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-2">
+            Nom du Projet (Optionnel)
+          </label>
+          <input
+            type="text"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            placeholder="ex: Audit Client X - Q3"
+            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder-gray-600"
+            disabled={isScanning}
+          />
+        </div>
+
         {/* Target Input */}
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">

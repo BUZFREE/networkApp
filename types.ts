@@ -27,7 +27,9 @@ export enum ToolType {
   TOPOLOGY = 'Network Topology',
   GLOBAL_PING = 'Global Ping / Outage',
   SELENIUM = 'Selenium Automation',
-  JMETER = 'Apache JMeter'
+  JMETER = 'Apache JMeter',
+  WIRESHARK = 'Wireshark Traffic Analysis',
+  FORENSICS = 'Network Forensics / DPI'
 }
 
 export interface Vulnerability {
@@ -179,8 +181,56 @@ export interface JMeterReport {
     samples: JMeterSample[];
 }
 
+// Wireshark / Network Packets
+export interface NetworkPacket {
+    no: number;
+    time: string;
+    source: string;
+    destination: string;
+    protocol: string; // TCP, UDP, HTTP, TLSv1.3, DNS
+    length: number;
+    info: string;
+    hexDump?: string; // Simulated raw data
+    details?: {
+        frame: string;
+        ethernet: string;
+        ip: string;
+        transport: string; // TCP/UDP segment info
+        application?: string; // HTTP/DNS info
+    };
+}
+
+// New: DPI / Forensics
+export interface ProtocolStat {
+    protocol: string;
+    percent: number;
+    packets: number;
+    bytes: number;
+}
+
+export interface ExpertInfo {
+    severity: 'Chat' | 'Note' | 'Warning' | 'Error';
+    group: string; // e.g. Sequence, Checksum
+    protocol: string;
+    summary: string;
+}
+
+export interface ReconstructedStream {
+    id: string;
+    title: string; // e.g. "Stream #4 (HTTP POST)"
+    content: string; // ASCII content
+    tags: string[]; // e.g. ["SQLi Detected", "Plaintext"]
+}
+
+export interface ForensicsReport {
+    protocolStats: ProtocolStat[];
+    expertIssues: ExpertInfo[];
+    reconstructedStreams: ReconstructedStream[];
+}
+
 export interface ScanResult {
   id: string;
+  projectName?: string;
   targetUrl: string;
   targetIp: string;
   timestamp: string;
@@ -205,9 +255,14 @@ export interface ScanResult {
   globalPing?: GlobalPingRegion[];
   seleniumReport?: SeleniumScenario[];
   jmeterReport?: JMeterReport;
+  packetCapture?: NetworkPacket[];
+  
+  // Forensics
+  forensicsReport?: ForensicsReport;
 }
 
 export interface ScanRequest {
+  projectName?: string;
   target: string;
   tools: ToolType[];
   intensity: 'quick' | 'normal' | 'deep';

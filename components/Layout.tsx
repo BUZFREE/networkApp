@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Shield, Activity, List, Menu, X, LayoutDashboard } from 'lucide-react';
+import { Shield, Activity, List, Menu, X, LayoutDashboard, Youtube } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -30,16 +31,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 z-50 h-screen w-64 bg-surface border-r border-slate-700 transition-transform duration-300 ease-in-out
+        fixed top-0 left-0 z-50 h-screen w-64 bg-surface border-r border-slate-700 transition-transform duration-300 ease-in-out flex flex-col
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 md:static
       `}>
-        <div className="h-16 flex items-center px-6 border-b border-slate-700">
+        {/* Sidebar Header */}
+        <div className="h-16 flex items-center px-6 border-b border-slate-700 flex-shrink-0">
           <Shield className="text-primary mr-3" size={28} />
           <span className="text-xl font-bold tracking-wider text-white">SecuScan Pro</span>
         </div>
 
-        <nav className="p-4 space-y-2">
+        {/* Navigation Items */}
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -57,8 +60,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 w-full p-4 border-t border-slate-700">
-          <div className="flex items-center space-x-3 text-sm text-gray-500">
+        {/* Sidebar Footer & Social */}
+        <div className="p-4 border-t border-slate-700 bg-surface flex-shrink-0">
+          <a 
+            href="https://www.youtube.com/@issaadhassani" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-colors border border-transparent hover:border-red-500/20"
+          >
+            <Youtube size={20} />
+            <span className="font-medium">Tutoriels & Démo</span>
+          </a>
+
+          <div className="flex items-center space-x-3 text-sm text-gray-500 px-4 pt-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             <span>Système Opérationnel</span>
           </div>
@@ -68,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden h-16 bg-surface border-b border-slate-700 flex items-center justify-between px-4">
+        <header className="md:hidden h-16 bg-surface border-b border-slate-700 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center">
             <Shield className="text-primary mr-2" size={24} />
             <span className="font-bold">SecuScan Pro</span>

@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid, LineChart, Line, BarChart, Bar } from 'recharts';
-import { AlertTriangle, Server, ShieldCheck, Terminal, Download, Globe, Network, Zap, Cpu, Activity, Lock, Search, Share2, Map, Smartphone, Check, XCircle, FileText, Bot, PlayCircle, BarChart2, Layers } from 'lucide-react';
-import { ScanResult, Severity } from '../types';
+import { AlertTriangle, Server, ShieldCheck, Terminal, Download, Globe, Network, Zap, Cpu, Activity, Lock, Search, Share2, Map, Smartphone, Check, XCircle, FileText, Bot, PlayCircle, BarChart2, Layers, Wifi, FileCode, AlertOctagon, AlignLeft } from 'lucide-react';
+import { ScanResult, Severity, NetworkPacket } from '../types';
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -20,9 +20,12 @@ const COLORS = {
 };
 
 const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'infrastructure' | 'network' | 'topology' | 'selenium' | 'jmeter'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'infrastructure' | 'network' | 'topology' | 'selenium' | 'jmeter' | 'traffic'>('overview');
   const [isExporting, setIsExporting] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
+  const [selectedPacket, setSelectedPacket] = useState<NetworkPacket | null>(null);
+  const [showForensics, setShowForensics] = useState(false);
 
   const severityCounts = result.vulnerabilities.reduce((acc, curr) => {
     acc[curr.severity] = (acc[curr.severity] || 0) + 1;
@@ -45,14 +48,13 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
   const getPerformanceChartData = () => {
     if (!result.performanceReport?.metrics) return [];
     
-    // Filter for time-based metrics to keep scale consistent (avoiding CLS which is 0.1 etc)
+    // Filter for time-based metrics to keep scale consistent
     const timeMetrics = ['LCP', 'FCP', 'TTFB', 'TBT', 'FID', 'Speed Index'];
     
     return result.performanceReport.metrics
       .filter(m => timeMetrics.some(tm => m.name.includes(tm)))
       .map(m => {
         let val = 0;
-        // Simple parsing: "1.2s" -> 1200, "500ms" -> 500
         if (m.value.includes('ms')) {
            val = parseFloat(m.value.replace('ms', '').trim());
         } else if (m.value.includes('s')) {
@@ -81,115 +83,265 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
     document.body.removeChild(link);
   };
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
+
+  // --- EXHAUSTIVE PDF EXPORT FUNCTION ---
   const handleExportReport = async () => {
     setIsExporting(true);
+    
+    // 1. Capture Visible Charts (using the hidden export containers to ensure availability)
+    const chartsToCapture = [
+        { id: 'export-chart-severity', name: 'severityImg' },
+        { id: 'export-chart-health', name: 'healthImg' },
+        { id: 'export-chart-load', name: 'loadImg' },
+        { id: 'export-chart-performance', name: 'perfImg' },
+        { id: 'export-chart-topology', name: 'topologyImg' },
+        { id: 'export-chart-jmeter-latency', name: 'jmeterLatImg' },
+        { id: 'export-chart-jmeter-throughput', name: 'jmeterThrImg' }
+    ];
+
+    const capturedImages: Record<string, string | null> = {};
+
+    try {
+        for (const chart of chartsToCapture) {
+            const el = document.getElementById(chart.id);
+            if (el) {
+                // HIGH QUALITY CAPTURE: Scale set to 3 for sharp text/lines
+                const canvas = await html2canvas(el, { 
+                    scale: 3, 
+                    backgroundColor: '#1e293b',
+                    useCORS: true,
+                    logging: false
+                }); 
+                capturedImages[chart.name] = canvas.toDataURL('image/png', 1.0);
+            }
+        }
+    } catch (e) {
+        console.warn("Chart capture warning:", e);
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // --- Header ---
+    let yPos = 20;
+
+    // Helper: Add Section Title
+    const addSectionHeader = (title: string) => {
+        if (yPos > 270) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(14);
+        doc.setTextColor(16, 185, 129); // Primary Color
+        doc.text(title, 14, yPos);
+        doc.setTextColor(0, 0, 0); // Reset color
+        yPos += 10;
+    };
+
+    // Helper: Add Image
+    const addImageToPdf = (imgKey: string, height = 80) => {
+        if (capturedImages[imgKey]) {
+            if (yPos + height > 280) { doc.addPage(); yPos = 20; }
+            // Center the image
+            doc.addImage(capturedImages[imgKey]!, 'PNG', 14, yPos, pageWidth - 28, height);
+            yPos += height + 10;
+        }
+    };
+
+    // --- COVER PAGE ---
     doc.setFillColor(15, 23, 42); // Slate 900
     doc.rect(0, 0, pageWidth, 40, 'F');
-    
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.text("SecuScan Pro", 14, 15);
     doc.setFontSize(12);
-    doc.text("Rapport d'Audit de Sécurité", 14, 25);
+    doc.text("Rapport d'Audit de Sécurité & Infrastructure", 14, 25);
     
     doc.setFontSize(10);
     doc.text(`Cible: ${result.targetUrl}`, pageWidth - 15, 15, { align: 'right' });
     doc.text(`Date: ${new Date(result.timestamp).toLocaleString()}`, pageWidth - 15, 20, { align: 'right' });
     doc.text(`Score: ${result.overallScore}/100`, pageWidth - 15, 25, { align: 'right' });
-
-    let yPos = 50;
+    
+    yPos = 50;
     doc.setTextColor(0, 0, 0);
 
-    // --- AI Summary ---
-    doc.setFontSize(14);
-    doc.setTextColor(16, 185, 129); // Primary color
-    doc.text("Résumé de l'Analyse IA", 14, yPos);
-    yPos += 7;
+    // 1. OVERVIEW & AI ANALYSIS
+    addSectionHeader("1. Résumé Exécutif & Analyse IA");
+    
     doc.setFontSize(10);
     doc.setTextColor(50, 50, 50);
     const splitAi = doc.splitTextToSize(result.aiAnalysis, pageWidth - 28);
     doc.text(splitAi, 14, yPos);
     yPos += (splitAi.length * 5) + 10;
+    
+    addImageToPdf('severityImg', 100);
 
-    // --- Charts Capture ---
-    const severityChart = document.getElementById('chart-severity');
-    if (severityChart) {
-        try {
-            const canvas = await html2canvas(severityChart);
-            const imgData = canvas.toDataURL('image/png');
-            // Scale to fit half page
-            doc.addImage(imgData, 'PNG', 14, yPos, 80, 60);
-            
-            // Add severity stats text next to chart
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-            doc.text("Statistiques Vulnérabilités", 110, yPos + 10);
-            let statY = yPos + 20;
-            doc.setFontSize(10);
-            Object.entries(severityCounts).forEach(([sev, count]) => {
-                doc.text(`${sev}: ${count}`, 110, statY);
-                statY += 6;
-            });
-            
-            yPos += 70;
-        } catch (e) {
-            console.error("Chart capture failed", e);
-        }
-    }
-
-    // --- Vulnerabilities Table ---
-    doc.setFontSize(14);
-    doc.setTextColor(16, 185, 129);
-    doc.text("Détail des Vulnérabilités", 14, yPos);
-    yPos += 5;
-
+    // 2. VULNERABILITIES DETAILED
+    addSectionHeader("2. Détail des Vulnérabilités");
     autoTable(doc, {
         startY: yPos,
-        head: [['Sévérité', 'Nom', 'Outil']],
-        body: result.vulnerabilities.map(v => [v.severity, v.name, v.toolDetected]),
+        head: [['Sévérité', 'Vulnérabilité', 'Outil', 'Description']],
+        body: result.vulnerabilities.map(v => [v.severity, v.name, v.toolDetected, v.description.substring(0, 80) + '...']),
         headStyles: { fillColor: [30, 41, 59] },
-        styles: { fontSize: 9 },
+        styles: { fontSize: 8 },
+        columnStyles: { 0: { fontStyle: 'bold' } }
     });
-    
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as any).lastAutoTable.finalY + 10;
 
-    // --- Open Ports Table ---
-    if (result.openPorts.length > 0) {
-        doc.setFontSize(14);
-        doc.setTextColor(16, 185, 129);
-        doc.text("Ports Ouverts", 14, yPos);
-        yPos += 5;
-        
-        autoTable(doc, {
-            startY: yPos,
-            head: [['Port', 'Service', 'État', 'Version']],
-            body: result.openPorts.map(p => [p.port, p.service, p.state, p.version || '-']),
-            headStyles: { fillColor: [30, 41, 59] },
-            styles: { fontSize: 9 },
-        });
+    // 3. INFRASTRUCTURE & PERFORMANCE
+    addSectionHeader("3. Infrastructure & Performance Web");
+    
+    if (result.serverHealth) {
+        doc.text("Santé Serveur (CPU/RAM):", 14, yPos); yPos += 5;
+        addImageToPdf('healthImg', 70);
     }
     
-    // --- Connected Assets Table (New) ---
-    if (result.connectedAssets && result.connectedAssets.length > 0) {
-        doc.setFontSize(14);
-        doc.setTextColor(16, 185, 129);
-        doc.text("Actifs Connectés & IPs", 14, yPos);
-        yPos += 5;
-        
+    if (result.loadTestResults && result.loadTestResults.length > 0) {
+        doc.text("Test de Charge (Simulé):", 14, yPos); yPos += 5;
+        addImageToPdf('loadImg', 80);
+    }
+    
+    if (perfChartData.length > 0) {
+        doc.text("Métriques Web Vitals:", 14, yPos); yPos += 5;
+        addImageToPdf('perfImg', 80);
+    }
+
+    const infraData = [];
+    if(result.serverHealth) {
+        infraData.push(['CPU / RAM', `CPU: ${result.serverHealth.cpuUsage}% | RAM: ${result.serverHealth.ramUsage}%`]);
+        infraData.push(['OS / Uptime', `${result.serverHealth.os} | Up: ${result.serverHealth.uptime}`]);
+    }
+    if(result.performanceReport) {
+        infraData.push(['Score Performance', `${result.performanceReport.overallScore}/100`]);
+    }
+    
+    autoTable(doc, {
+        startY: yPos,
+        head: [['Métrique', 'Valeur']],
+        body: infraData,
+        headStyles: { fillColor: [71, 85, 105] },
+    });
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+
+    // Web Vitals Table
+    if (result.performanceReport?.metrics) {
+        doc.setFontSize(10); doc.text("Détail Web Vitals:", 14, yPos); yPos += 5;
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Métrique', 'Valeur', 'Score']],
+            body: result.performanceReport.metrics.map(m => [m.name, m.value, m.score]),
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [71, 85, 105] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // 4. NETWORK & TOPOLOGY
+    addSectionHeader("4. Réseau, Topologie & Actifs");
+    
+    if (result.topology) {
+        doc.text("Topologie Détectée:", 14, yPos); yPos += 5;
+        addImageToPdf('topologyImg', 90);
+    }
+
+    // Connected Assets Table
+    if(result.connectedAssets.length > 0) {
+        doc.setFontSize(10); doc.text("Actifs Connectés (IPs/Sous-domaines):", 14, yPos); yPos += 5;
         autoTable(doc, {
             startY: yPos,
             head: [['Hostname', 'IP', 'Type', 'Localisation']],
             body: result.connectedAssets.map(a => [a.hostname, a.ip, a.type, a.location]),
+            styles: { fontSize: 8 },
             headStyles: { fillColor: [30, 41, 59] },
-            styles: { fontSize: 9 },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Security Headers
+    if(result.securityHeaders) {
+        doc.setFontSize(10); doc.text("En-têtes de Sécurité:", 14, yPos); yPos += 5;
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Header', 'Status', 'Valeur']],
+            body: result.securityHeaders.map(h => [h.name, h.status, h.value.substring(0,30)+'...']),
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [30, 41, 59] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // 5. AUTOMATION (SELENIUM)
+    if(result.seleniumReport) {
+        addSectionHeader("5. Tests Automatisés (Selenium)");
+        result.seleniumReport.forEach(scenario => {
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text(`Scénario: ${scenario.name} (${scenario.status})`, 14, yPos);
+            yPos += 5;
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Étape', 'Action', 'Attendu', 'Réel', 'Status']],
+                body: scenario.steps.map(s => [s.stepNumber, s.action, s.expectedResult, s.actualResult, s.status]),
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [22, 163, 74] }, // Green tint
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 10;
         });
     }
 
-    // Footer
+    // 6. LOAD TEST (JMETER)
+    if(result.jmeterReport) {
+        addSectionHeader("6. Test de Charge (JMeter)");
+        
+        doc.text("Latence:", 14, yPos); yPos += 5;
+        addImageToPdf('jmeterLatImg', 80);
+        
+        doc.text("Débit (Throughput):", 14, yPos); yPos += 5;
+        addImageToPdf('jmeterThrImg', 80);
+        
+        const sum = result.jmeterReport.summary;
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Métrique', 'Valeur', 'Métrique', 'Valeur']],
+            body: [
+                ['Total Samples', sum.totalSamples, 'Throughput', `${sum.throughput}/s`],
+                ['Avg Latency', `${sum.averageLatency}ms`, 'Max Latency', `${sum.maxLatency}ms`],
+                ['Error Rate', `${sum.errorPct}%`, '99th %', `${sum.p99}ms`]
+            ],
+            headStyles: { fillColor: [234, 88, 12] }, // Orange tint
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // 7. TRAFFIC (WIRESHARK)
+    if(result.packetCapture) {
+        addSectionHeader("7. Analyse Trafic (Wireshark)");
+        
+        // Protocol Stats
+        if (result.forensicsReport?.protocolStats) {
+             autoTable(doc, {
+                startY: yPos,
+                head: [['Protocole', '%', 'Paquets']],
+                body: result.forensicsReport.protocolStats.map(s => [s.protocol, `${s.percent}%`, s.packets]),
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [59, 130, 246] }, // Blue
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // Packet List (Limit to first 30 for PDF size)
+        doc.text("Extrait de capture (30 premiers paquets):", 14, yPos); yPos += 5;
+        autoTable(doc, {
+            startY: yPos,
+            head: [['No', 'Time', 'Src', 'Dst', 'Proto', 'Info']],
+            body: result.packetCapture.slice(0, 30).map(p => [p.no, p.time, p.source, p.destination, p.protocol, p.info.substring(0,40)]),
+            styles: { fontSize: 7, font: 'courier' },
+            headStyles: { fillColor: [15, 23, 42] },
+        });
+    }
+
+    // Add Page Numbers
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -198,22 +350,46 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
         doc.text(`Page ${i} sur ${pageCount} - Généré par SecuScan Pro`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
     }
 
-    doc.save(`SecuScan_Rapport_${result.id}.pdf`);
+    doc.save(`Rapport_Complet_${result.targetUrl}.pdf`);
     setIsExporting(false);
   };
 
+  // Helper for Packet Protocol Colors
+  const getPacketColor = (proto: string) => {
+      const p = proto.toUpperCase();
+      if (p.includes('TCP')) return 'text-green-400 bg-green-900/10 border-green-900/30';
+      if (p.includes('UDP')) return 'text-blue-400 bg-blue-900/10 border-blue-900/30';
+      if (p.includes('HTTP')) return 'text-emerald-400 bg-emerald-900/10 border-emerald-900/30';
+      if (p.includes('TLS') || p.includes('SSL')) return 'text-purple-400 bg-purple-900/10 border-purple-900/30';
+      if (p.includes('DNS')) return 'text-cyan-400 bg-cyan-900/10 border-cyan-900/30';
+      return 'text-gray-300 bg-slate-800 border-slate-700';
+  };
+
+  // Helper for Selenium Icon
+  const CheckCircle = ({size, className}: {size: number, className: string}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+  );
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in relative">
       
       {/* Action Bar */}
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-4 space-x-4">
+        <button
+          onClick={handleShare}
+          className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition-colors border border-slate-600 shadow-lg"
+        >
+          {isCopied ? <Check size={18} className="text-green-500" /> : <Share2 size={18} />}
+          <span>{isCopied ? 'Lien copié !' : 'Partager'}</span>
+        </button>
+
         <button 
           onClick={handleExportReport} 
           disabled={isExporting}
           className="flex items-center space-x-2 bg-primary hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-primary/20"
         >
           {isExporting ? <Activity className="animate-spin" size={18} /> : <FileText size={18} />}
-          <span>{isExporting ? 'Génération...' : 'Exporter le rapport PDF'}</span>
+          <span>{isExporting ? 'Génération du Rapport PDF...' : 'Exporter le rapport complet (PDF)'}</span>
         </button>
       </div>
 
@@ -293,7 +469,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 
       {/* Tabs */}
       <div className="border-b border-slate-700 flex space-x-6 overflow-x-auto">
-          {['overview', 'infrastructure', 'network', 'topology', 'selenium', 'jmeter'].map((tab) => (
+          {['overview', 'infrastructure', 'network', 'topology', 'selenium', 'jmeter', 'traffic'].map((tab) => (
              <button 
                key={tab}
                onClick={() => setActiveTab(tab as any)} 
@@ -301,9 +477,10 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                    ? 'border-primary text-primary' 
                    : 'border-transparent text-gray-400 hover:text-white'}`}
              >
-               {tab === 'topology' ? 'Topologie & Découverte' : 
-                tab === 'selenium' ? 'Automatisation (Selenium)' : 
-                tab === 'jmeter' ? 'JMeter Load Test' : 
+               {tab === 'topology' ? 'Topologie' : 
+                tab === 'selenium' ? 'Automatisation' : 
+                tab === 'jmeter' ? 'Test de Charge' : 
+                tab === 'traffic' ? 'Trafic Réseau' : 
                 tab}
              </button>
           ))}
@@ -383,7 +560,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
             </div>
 
             {result.performanceReport && (
-              <div className="bg-surface border border-purple-500/30 p-6 rounded-xl shadow-lg relative">
+              <div className="bg-surface border border-purple-500/30 p-6 rounded-xl shadow-lg relative" id="chart-performance">
                   <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xl font-bold text-white flex items-center"><Zap className="mr-2 text-purple-500" size={24} /> Performance Web</h3>
                       <span className="text-xl font-bold px-3 py-1 rounded bg-slate-800 border border-slate-600">{result.performanceReport.overallScore}/100</span>
@@ -501,7 +678,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 
              {/* New BarChart for Web Vitals (Added as requested) */}
              {perfChartData.length > 0 && (
-                 <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                 <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg" id="chart-performance-details">
                     <h3 className="text-lg font-semibold mb-6 text-white flex items-center">
                        <BarChart2 className="mr-2 text-primary" size={20} /> Métriques de Performance (Web Vitals)
                     </h3>
@@ -627,7 +804,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                   <h3 className="text-lg font-semibold mb-6 text-white flex items-center">
                       <Share2 className="mr-2 text-primary" size={20} /> Topologie Réseau & Infrastructure
                   </h3>
-                  <div className="relative h-64 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-around p-8 overflow-hidden">
+                  <div id="chart-topology" className="relative h-64 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-around p-8 overflow-hidden">
                       {/* Connection Lines (Simulated with absolute divs) */}
                       <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-transparent via-slate-600 to-transparent opacity-20 transform -translate-y-1/2 pointer-events-none"></div>
 
@@ -872,7 +1049,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 
                           {/* Charts */}
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800" id="chart-jmeter-latency">
                                   <h4 className="text-sm text-gray-400 uppercase font-bold mb-4 text-center">Response Time Over Time</h4>
                                   <div className="h-64">
                                       <ResponsiveContainer width="100%" height="100%">
@@ -888,7 +1065,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                                   </div>
                               </div>
                               
-                              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800" id="chart-jmeter-throughput">
                                   <h4 className="text-sm text-gray-400 uppercase font-bold mb-4 text-center">Throughput vs Threads</h4>
                                   <div className="h-64">
                                       <ResponsiveContainer width="100%" height="100%">
@@ -916,6 +1093,312 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
               </div>
           </div>
       )}
+
+      {/* TRAFFIC / WIRESHARK TAB */}
+      {activeTab === 'traffic' && (
+          <div className="space-y-6 animate-fade-in">
+             
+             {/* Forensics Toggle / Banner */}
+             {result.forensicsReport && (
+                 <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
+                     <div className="flex items-center space-x-3">
+                         <AlertOctagon className="text-orange-500" size={24} />
+                         <div>
+                             <h4 className="font-bold text-white">Rapport Forensics Disponible</h4>
+                             <p className="text-xs text-gray-400">Analyse approfondie (DPI), alertes expertes et reconstruction de flux.</p>
+                         </div>
+                     </div>
+                     <button 
+                         onClick={() => setShowForensics(!showForensics)}
+                         className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center ${showForensics ? 'bg-primary text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}
+                     >
+                         {showForensics ? 'Masquer le rapport Forensics' : 'Voir le rapport Forensics'}
+                     </button>
+                 </div>
+             )}
+
+             {/* FORENSICS PANEL */}
+             {showForensics && result.forensicsReport && (
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-top-4">
+                     {/* Protocol Stats */}
+                     <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                         <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center"><BarChart2 className="mr-2" size={16}/> Hiérarchie des Protocoles</h3>
+                         <div className="space-y-3">
+                             {result.forensicsReport.protocolStats.map((stat, i) => (
+                                 <div key={i}>
+                                     <div className="flex justify-between text-sm mb-1">
+                                         <span className="text-white font-mono">{stat.protocol}</span>
+                                         <span className="text-gray-400">{stat.percent}%</span>
+                                     </div>
+                                     <div className="w-full bg-slate-900 rounded-full h-2">
+                                         <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${stat.percent}%` }}></div>
+                                     </div>
+                                     <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                                         <span>{stat.packets} paquets</span>
+                                         <span>{stat.bytes} octets</span>
+                                     </div>
+                                 </div>
+                             ))}
+                         </div>
+                     </div>
+
+                     {/* Expert Info */}
+                     <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                         <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center"><AlertTriangle className="mr-2" size={16}/> Expert Information</h3>
+                         <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                             {result.forensicsReport.expertIssues.map((issue, i) => (
+                                 <div key={i} className="flex items-start space-x-3 p-3 bg-slate-900 rounded border border-slate-800">
+                                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                                         issue.severity === 'Error' ? 'bg-red-500' : 
+                                         issue.severity === 'Warning' ? 'bg-yellow-500' : 'bg-blue-400'
+                                     }`}></div>
+                                     <div>
+                                         <p className="text-xs font-bold text-white">{issue.summary}</p>
+                                         <p className="text-[10px] text-gray-500">{issue.group} • {issue.protocol}</p>
+                                     </div>
+                                 </div>
+                             ))}
+                         </div>
+                     </div>
+
+                     {/* Reconstructed Stream (Follow TCP Stream) */}
+                     <div className="lg:col-span-2 bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                         <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center"><AlignLeft className="mr-2" size={16}/> Reconstruction de Flux (Follow TCP Stream)</h3>
+                         {result.forensicsReport.reconstructedStreams.map((stream, i) => (
+                             <div key={i} className="space-y-2">
+                                 <div className="flex items-center justify-between">
+                                     <span className="text-xs font-bold text-secondary">{stream.title}</span>
+                                     <div className="flex gap-2">
+                                         {stream.tags.map((tag, t) => (
+                                             <span key={t} className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded uppercase font-bold border border-red-500/30">{tag}</span>
+                                         ))}
+                                     </div>
+                                 </div>
+                                 <pre className="bg-black/50 p-4 rounded text-xs font-mono text-green-400 overflow-x-auto border border-slate-800">
+                                     {stream.content}
+                                 </pre>
+                             </div>
+                         ))}
+                     </div>
+                 </div>
+             )}
+
+             <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                <h3 className="text-lg font-semibold mb-6 text-white flex items-center">
+                    <Wifi className="mr-3 text-blue-400" size={24} /> 
+                    Trafic Réseau (Capture de Paquets)
+                </h3>
+
+                {!result.packetCapture || result.packetCapture.length === 0 ? (
+                    <div className="text-center py-12">
+                        <Wifi size={48} className="mx-auto text-gray-600 mb-4" />
+                        <p className="text-gray-400">Aucune capture de paquets disponible.</p>
+                        <p className="text-sm text-gray-500 mt-2">Activez l'outil "Wireshark Analysis" pour simuler une capture.</p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col lg:flex-row gap-6 h-[600px]">
+                        {/* Packet List */}
+                        <div className="lg:w-2/3 flex flex-col bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-left text-sm font-mono">
+                                    <thead className="bg-slate-800 text-gray-400 sticky top-0">
+                                        <tr>
+                                            <th className="p-2 w-12 border-r border-slate-700">No.</th>
+                                            <th className="p-2 w-20 border-r border-slate-700">Time</th>
+                                            <th className="p-2 w-32 border-r border-slate-700">Source</th>
+                                            <th className="p-2 w-32 border-r border-slate-700">Destination</th>
+                                            <th className="p-2 w-20 border-r border-slate-700">Proto</th>
+                                            <th className="p-2 w-16 border-r border-slate-700">Len</th>
+                                            <th className="p-2">Info</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800">
+                                        {result.packetCapture.map((pkt) => (
+                                            <tr 
+                                                key={pkt.no} 
+                                                onClick={() => setSelectedPacket(pkt)}
+                                                className={`cursor-pointer hover:bg-slate-700 transition-colors ${
+                                                    selectedPacket?.no === pkt.no ? 'bg-blue-600/30' : getPacketColor(pkt.protocol).replace('text-', 'bg-').split(' ')[1]
+                                                }`}
+                                            >
+                                                <td className="p-2 border-r border-slate-700/50 text-gray-500">{pkt.no}</td>
+                                                <td className="p-2 border-r border-slate-700/50 text-gray-400">{pkt.time}</td>
+                                                <td className="p-2 border-r border-slate-700/50 text-white">{pkt.source}</td>
+                                                <td className="p-2 border-r border-slate-700/50 text-white">{pkt.destination}</td>
+                                                <td className={`p-2 border-r border-slate-700/50 font-bold ${getPacketColor(pkt.protocol).split(' ')[0]}`}>{pkt.protocol}</td>
+                                                <td className="p-2 border-r border-slate-700/50 text-gray-400">{pkt.length}</td>
+                                                <td className="p-2 text-gray-300 truncate max-w-xs">{pkt.info}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="bg-slate-800 p-2 text-xs text-gray-400 border-t border-slate-700">
+                                {result.packetCapture.length} packets displayed
+                            </div>
+                        </div>
+
+                        {/* Packet Details */}
+                        <div className="lg:w-1/3 bg-slate-900 rounded-lg border border-slate-800 overflow-y-auto p-4 font-mono text-sm">
+                            <h4 className="text-gray-400 uppercase font-bold text-xs mb-4 border-b border-slate-700 pb-2">Packet Details</h4>
+                            {selectedPacket ? (
+                                <div className="space-y-4">
+                                    {selectedPacket.details?.frame && (
+                                        <div className="border border-slate-700 rounded bg-slate-800/50">
+                                            <div className="bg-slate-800 px-3 py-2 text-xs font-bold text-gray-400 uppercase">Frame</div>
+                                            <div className="p-3 text-gray-300 whitespace-pre-wrap">{selectedPacket.details.frame}</div>
+                                        </div>
+                                    )}
+                                    {selectedPacket.details?.ethernet && (
+                                        <div className="border border-slate-700 rounded bg-slate-800/50">
+                                            <div className="bg-slate-800 px-3 py-2 text-xs font-bold text-gray-400 uppercase">Ethernet</div>
+                                            <div className="p-3 text-gray-300 whitespace-pre-wrap">{selectedPacket.details.ethernet}</div>
+                                        </div>
+                                    )}
+                                    {selectedPacket.details?.ip && (
+                                        <div className="border border-slate-700 rounded bg-slate-800/50">
+                                            <div className="bg-slate-800 px-3 py-2 text-xs font-bold text-gray-400 uppercase">Internet Protocol</div>
+                                            <div className="p-3 text-gray-300 whitespace-pre-wrap">{selectedPacket.details.ip}</div>
+                                        </div>
+                                    )}
+                                    {selectedPacket.details?.transport && (
+                                        <div className="border border-slate-700 rounded bg-slate-800/50">
+                                            <div className="bg-slate-800 px-3 py-2 text-xs font-bold text-gray-400 uppercase">Transport Layer</div>
+                                            <div className="p-3 text-gray-300 whitespace-pre-wrap">{selectedPacket.details.transport}</div>
+                                        </div>
+                                    )}
+                                    {selectedPacket.details?.application && (
+                                        <div className="border border-slate-700 rounded bg-slate-800/50">
+                                            <div className="bg-slate-800 px-3 py-2 text-xs font-bold text-gray-400 uppercase">Application Layer</div>
+                                            <div className="p-3 text-emerald-400 whitespace-pre-wrap">{selectedPacket.details.application}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center text-gray-500 py-10">
+                                    <FileCode size={32} className="mx-auto mb-3 opacity-30" />
+                                    Select a packet to view details
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+             </div>
+          </div>
+      )}
+
+      {/* HIDDEN EXPORT ZONE FOR HIGH QUALITY PDF GENERATION */}
+      {/* 
+        This renders all charts off-screen with large dimensions (1200px) 
+        and high contrast styling so html2canvas can capture them with maximum detail.
+      */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '1200px', visibility: 'visible', zIndex: -100 }}>
+          
+          <div id="export-chart-severity" style={{ width: 1200, height: 600, background: '#1e293b', padding: 40 }}>
+               <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                        data={pieData} 
+                        cx="50%" cy="50%" 
+                        innerRadius={100} 
+                        outerRadius={160} 
+                        paddingAngle={5} 
+                        dataKey="value" 
+                        isAnimationActive={false}
+                        label={({name, value}) => `${name}: ${value}`}
+                    >
+                      {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[entry.name as Severity] || '#94a3b8'} />)}
+                    </Pie>
+                    <Legend wrapperStyle={{ fontSize: '20px', paddingTop: '20px' }} iconSize={20} />
+                  </PieChart>
+                </ResponsiveContainer>
+          </div>
+
+          <div id="export-chart-health" style={{ width: 1200, height: 500, background: '#1e293b', padding: 40, display: 'flex' }}>
+              {result.serverHealth ? (
+                 <>
+                   <div style={{ width: '50%', height: '100%' }}>
+                     <h4 style={{ color: 'white', textAlign: 'center', marginBottom: 20, fontSize: 24 }}>CPU Usage</h4>
+                     <ResponsiveContainer><PieChart><Pie data={cpuData} innerRadius={60} outerRadius={100} dataKey="value" startAngle={90} endAngle={-270} isAnimationActive={false} label><Cell fill="#3b82f6"/><Cell fill="#0f172a"/></Pie></PieChart></ResponsiveContainer>
+                   </div>
+                   <div style={{ width: '50%', height: '100%' }}>
+                     <h4 style={{ color: 'white', textAlign: 'center', marginBottom: 20, fontSize: 24 }}>RAM Usage</h4>
+                     <ResponsiveContainer><PieChart><Pie data={ramData} innerRadius={60} outerRadius={100} dataKey="value" startAngle={90} endAngle={-270} isAnimationActive={false} label><Cell fill="#8b5cf6"/><Cell fill="#0f172a"/></Pie></PieChart></ResponsiveContainer>
+                   </div>
+                 </>
+              ) : <div>No Data</div>}
+          </div>
+
+          <div id="export-chart-load" style={{ width: 1200, height: 600, background: '#1e293b', padding: 40 }}>
+               {result.loadTestResults && (
+                   <ResponsiveContainer width="100%" height="100%">
+                     <AreaChart data={result.loadTestResults}>
+                         <XAxis dataKey="time" stroke="#94a3b8" tick={{fontSize: 14}} />
+                         <YAxis stroke="#94a3b8" tick={{fontSize: 14}} label={{ value: 'Latence (ms)', angle: -90, position: 'insideLeft', fill: '#94a3b8', fontSize: 16 }} />
+                         <Legend wrapperStyle={{ fontSize: '18px', paddingTop: '10px' }} />
+                         <Area type="monotone" dataKey="latency" stroke="#f97316" strokeWidth={3} fill="#f97316" fillOpacity={0.3} isAnimationActive={false} name="Latence (ms)" />
+                         <Area type="monotone" dataKey="requestsPerSecond" stroke="#3b82f6" strokeWidth={3} fill="transparent" isAnimationActive={false} name="Req/Sec" />
+                     </AreaChart>
+                   </ResponsiveContainer>
+               )}
+          </div>
+
+          <div id="export-chart-performance" style={{ width: 1200, height: 600, background: '#1e293b', padding: 40 }}>
+               {perfChartData.length > 0 && (
+                   <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={perfChartData}>
+                         <XAxis dataKey="name" stroke="#94a3b8" tick={{fontSize: 14}} />
+                         <YAxis stroke="#94a3b8" tick={{fontSize: 14}} />
+                         <Legend wrapperStyle={{ fontSize: '18px' }} />
+                         <Bar dataKey="duration" fill="#10b981" isAnimationActive={false} name="Durée (ms)" label={{ position: 'top', fill: '#fff', fontSize: 14 }} />
+                      </BarChart>
+                   </ResponsiveContainer>
+               )}
+          </div>
+
+          <div id="export-chart-topology" className="relative bg-slate-900 flex items-center justify-around" style={{ width: 1200, height: 500, padding: 40 }}>
+               <div className="absolute top-1/2 left-0 w-full h-2 bg-slate-600 opacity-20 transform -translate-y-1/2"></div>
+               {result.topology?.nodes.map((node, index) => (
+                  <div key={index} className="flex flex-col items-center z-10 scale-150 transform origin-center">
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 ${node.status === 'active' ? 'border-green-500/50 bg-slate-800' : 'border-red-500/50 bg-slate-900'}`}>
+                          {node.type === 'internet' && <Globe className="text-blue-400" size={24} />}
+                          {node.type === 'firewall' && <ShieldCheck className="text-primary" size={24} />}
+                          {node.type === 'load_balancer' && <Network className="text-purple-400" size={24} />}
+                          {node.type === 'server' && <Server className="text-secondary" size={24} />}
+                          {node.type === 'database' && <Activity className="text-orange-400" size={24} />}
+                      </div>
+                      <p className="mt-3 text-[10px] font-bold text-gray-300 uppercase bg-slate-900 px-2 py-1 rounded">{node.label}</p>
+                  </div>
+               ))}
+          </div>
+
+          <div id="export-chart-jmeter-latency" style={{ width: 1200, height: 600, background: '#1e293b', padding: 40 }}>
+             {result.jmeterReport && (
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={result.jmeterReport.samples}>
+                        <XAxis dataKey="timestamp" stroke="#94a3b8" tick={{fontSize: 14}} />
+                        <YAxis stroke="#94a3b8" tick={{fontSize: 14}} label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft', fill: '#94a3b8', fontSize: 16 }} />
+                        <Legend wrapperStyle={{ fontSize: '18px' }} />
+                        <Line type="monotone" dataKey="latency" stroke="#3b82f6" strokeWidth={4} dot={false} isAnimationActive={false} />
+                    </LineChart>
+                </ResponsiveContainer>
+             )}
+          </div>
+
+          <div id="export-chart-jmeter-throughput" style={{ width: 1200, height: 600, background: '#1e293b', padding: 40 }}>
+             {result.jmeterReport && (
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={result.jmeterReport.samples}>
+                        <XAxis dataKey="timestamp" stroke="#94a3b8" tick={{fontSize: 14}} />
+                        <YAxis stroke="#94a3b8" tick={{fontSize: 14}} />
+                        <Legend wrapperStyle={{ fontSize: '18px' }} />
+                        <Area type="monotone" dataKey="throughput" stroke="#10b981" fill="#10b981" fillOpacity={0.3} isAnimationActive={false} strokeWidth={3} />
+                    </AreaChart>
+                </ResponsiveContainer>
+             )}
+          </div>
+
+      </div>
 
     </div>
   );

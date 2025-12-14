@@ -80,8 +80,15 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
        - If 'Security Headers' selected: Generate 'securityHeaders'.
        - If 'Lighthouse' selected: Generate 'performanceReport'.
 
-    IMPORTANT: ensure all arrays (loadTestResults, jmeterReport.samples, globalPing) are populated with data, do not return empty arrays if the tool is selected.
-    Be realistic. If target is ${request.target}, match its likely tech stack.
+    7. PACKET ANALYSIS & FORENSICS (WIRESHARK & DPI):
+       - If 'Wireshark Analysis' is selected, Generate 'packetCapture' array (approx 15-20 packets). Sequence: DNS -> TCP Handshake -> HTTP GET -> TLS Handshake.
+       - If 'Network Forensics / DPI' is selected, YOU MUST Generate 'forensicsReport'.
+          - 'protocolStats': Realistic distribution (e.g. TCP 40%, TLS 30%, HTTP 20%, DNS 10%).
+          - 'expertIssues': Generate Wireshark-style Expert Infos (e.g. "TCP Retransmission", "Suspected SQL Injection", "Zero Window").
+          - 'reconstructedStreams': Generate a text block representing a reconstructed TCP stream (Follow TCP Stream). Make it look like a raw HTTP request/response. Example: "POST /login HTTP/1.1\nHost: ${request.target}\n\nusername=admin&password=' OR 1=1--".
+
+    IMPORTANT: ensure all arrays (loadTestResults, jmeterReport.samples, globalPing, packetCapture, forensicsReport.reconstructedStreams) are populated with data if tool selected.
+    Be realistic.
   `;
 
   const responseSchema = {
@@ -327,6 +334,76 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
                   }
               }
           }
+      },
+      // Wireshark Packet Capture
+      packetCapture: {
+          type: Type.ARRAY,
+          nullable: true,
+          items: {
+              type: Type.OBJECT,
+              properties: {
+                  no: { type: Type.NUMBER },
+                  time: { type: Type.STRING },
+                  source: { type: Type.STRING },
+                  destination: { type: Type.STRING },
+                  protocol: { type: Type.STRING },
+                  length: { type: Type.NUMBER },
+                  info: { type: Type.STRING },
+                  details: {
+                      type: Type.OBJECT,
+                      properties: {
+                          frame: { type: Type.STRING },
+                          ethernet: { type: Type.STRING },
+                          ip: { type: Type.STRING },
+                          transport: { type: Type.STRING },
+                          application: { type: Type.STRING }
+                      }
+                  }
+              }
+          }
+      },
+      // Forensics Report
+      forensicsReport: {
+          type: Type.OBJECT,
+          nullable: true,
+          properties: {
+              protocolStats: {
+                  type: Type.ARRAY,
+                  items: {
+                      type: Type.OBJECT,
+                      properties: {
+                          protocol: { type: Type.STRING },
+                          percent: { type: Type.NUMBER },
+                          packets: { type: Type.NUMBER },
+                          bytes: { type: Type.NUMBER }
+                      }
+                  }
+              },
+              expertIssues: {
+                  type: Type.ARRAY,
+                  items: {
+                      type: Type.OBJECT,
+                      properties: {
+                          severity: { type: Type.STRING, enum: ['Chat', 'Note', 'Warning', 'Error'] },
+                          group: { type: Type.STRING },
+                          protocol: { type: Type.STRING },
+                          summary: { type: Type.STRING }
+                      }
+                  }
+              },
+              reconstructedStreams: {
+                  type: Type.ARRAY,
+                  items: {
+                      type: Type.OBJECT,
+                      properties: {
+                          id: { type: Type.STRING },
+                          title: { type: Type.STRING },
+                          content: { type: Type.STRING },
+                          tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+                      }
+                  }
+              }
+          }
       }
     },
     required: ["targetIp", "overallScore", "aiAnalysis", "openPorts", "vulnerabilities"]
@@ -361,7 +438,9 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
       // Ensure arrays are initialized if missing from AI response but tools were selected
       loadTestResults: parsedData.loadTestResults || [],
       securityHeaders: parsedData.securityHeaders || [],
-      globalPing: parsedData.globalPing || []
+      globalPing: parsedData.globalPing || [],
+      packetCapture: parsedData.packetCapture || [],
+      forensicsReport: parsedData.forensicsReport || undefined
     };
 
   } catch (error) {
