@@ -6,6 +6,7 @@ import { ScanResult, Severity, NetworkPacket } from '../types';
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ResultsViewProps {
   result: ScanResult;
@@ -20,6 +21,7 @@ const COLORS = {
 };
 
 const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<'overview' | 'infrastructure' | 'network' | 'topology' | 'selenium' | 'jmeter' | 'traffic' | 'ids'>('overview');
   const [isExporting, setIsExporting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -490,22 +492,34 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
 
       {/* Tabs */}
       <div className="border-b border-slate-700 flex space-x-6 overflow-x-auto">
-          {['overview', 'infrastructure', 'network', 'topology', 'selenium', 'jmeter', 'traffic', 'ids'].map((tab) => (
-             <button 
-               key={tab}
-               onClick={() => setActiveTab(tab as any)} 
-               className={`py-3 px-2 border-b-2 font-medium transition-colors capitalize whitespace-nowrap ${activeTab === tab 
-                   ? 'border-primary text-primary' 
-                   : 'border-transparent text-gray-400 hover:text-white'}`}
-             >
-               {tab === 'topology' ? 'Topologie' : 
-                tab === 'selenium' ? 'Automatisation' : 
-                tab === 'jmeter' ? 'Test de Charge' : 
-                tab === 'traffic' ? 'Trafic Réseau' : 
-                tab === 'ids' ? 'IDS / IPS' : 
-                tab}
-             </button>
-          ))}
+          {['overview', 'infrastructure', 'network', 'topology', 'selenium', 'jmeter', 'traffic', 'ids'].map((tab) => {
+             // Dynamic Tab Label
+             let label = t(`tab_${tab}`);
+             if (label === `tab_${tab}`) { // Fallback if key missing (though added in Context)
+                 switch(tab) {
+                     case 'overview': label = 'Overview'; break;
+                     case 'infrastructure': label = 'Infrastructure'; break;
+                     case 'network': label = 'Network'; break;
+                     case 'topology': label = 'Topology'; break;
+                     case 'selenium': label = 'Automation'; break;
+                     case 'jmeter': label = 'Load Test'; break;
+                     case 'traffic': label = 'Traffic'; break;
+                     case 'ids': label = 'IDS / IPS'; break;
+                 }
+             }
+             
+             return (
+                 <button 
+                   key={tab}
+                   onClick={() => setActiveTab(tab as any)} 
+                   className={`py-3 px-2 border-b-2 font-medium transition-colors capitalize whitespace-nowrap ${activeTab === tab 
+                       ? 'border-primary text-primary' 
+                       : 'border-transparent text-gray-400 hover:text-white'}`}
+                 >
+                   {label}
+                 </button>
+             )
+          })}
       </div>
 
       {/* OVERVIEW TAB */}
@@ -904,6 +918,63 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result }) => {
                           Aucun actif connecté détecté.
                       </div>
                   )}
+              </div>
+
+              {/* IP Intelligence & Tracking Table (New Addition) */}
+              <div className="lg:col-span-2 bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">
+                  <h3 className="text-lg font-semibold mb-6 text-white flex items-center">
+                      <Activity className="mr-2 text-indigo-400" size={20} /> 
+                      Monitorage & Suivi des IPs (IP Intelligence)
+                  </h3>
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                          <thead className="bg-slate-900 border-b border-slate-700 text-xs uppercase text-gray-400 font-bold">
+                              <tr>
+                                  <th className="p-4">Adresse IP</th>
+                                  <th className="p-4">Hôte / Domaine</th>
+                                  <th className="p-4">Localisation</th>
+                                  <th className="p-4">Type</th>
+                                  <th className="p-4">Réputation (Simulée)</th>
+                                  <th className="p-4 text-right">Statut</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800">
+                              {result.connectedAssets.length === 0 ? (
+                                  <tr><td colSpan={6} className="p-4 text-center text-gray-500">Aucune donnée IP.</td></tr>
+                              ) : (
+                                  result.connectedAssets.map((asset, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
+                                          <td className="p-4 font-mono text-sm text-secondary">{asset.ip}</td>
+                                          <td className="p-4 text-white font-medium">{asset.hostname}</td>
+                                          <td className="p-4 text-sm text-gray-400">{asset.location}</td>
+                                          <td className="p-4">
+                                              <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs text-gray-300">
+                                                  {asset.type}
+                                              </span>
+                                          </td>
+                                          <td className="p-4">
+                                              <div className="flex items-center space-x-2">
+                                                  <div className="w-24 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                                      <div 
+                                                          className="h-full bg-green-500" 
+                                                          style={{ width: `${Math.floor(Math.random() * 30) + 70}%` }} // Simulated score
+                                                      ></div>
+                                                  </div>
+                                                  <span className="text-xs text-green-500">Sûr</span>
+                                              </div>
+                                          </td>
+                                          <td className="p-4 text-right">
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
+                                                  Actif
+                                              </span>
+                                          </td>
+                                      </tr>
+                                  ))
+                              )}
+                          </tbody>
+                      </table>
+                  </div>
               </div>
 
               <div className="bg-surface p-6 rounded-xl border border-slate-700 shadow-lg">

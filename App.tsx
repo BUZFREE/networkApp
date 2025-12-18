@@ -7,6 +7,7 @@ import ResultsView from './components/ResultsView';
 import { ScanRequest, ScanResult, Severity } from './types';
 import { performSimulatedScan } from './services/geminiService';
 import { Activity, Clock, ChevronDown, ChevronUp, AlertTriangle, Server, ShieldCheck, Loader2, RefreshCw, Wrench, ArrowRight } from 'lucide-react';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
 // Wrapper component to use router hooks
 const DashboardContent: React.FC<{ 
@@ -15,6 +16,7 @@ const DashboardContent: React.FC<{
   isScanning: boolean 
 }> = ({ scans, onStartScan, isScanning }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleScanStart = async (request: ScanRequest) => {
     onStartScan(request);
@@ -26,16 +28,16 @@ const DashboardContent: React.FC<{
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-         <h1 className="text-3xl font-bold text-white">Tableau de Bord</h1>
+         <h1 className="text-3xl font-bold text-white">{t('dashboard_title')}</h1>
          <div className="flex space-x-3">
              {runningScans.length > 0 && (
                  <div className="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-full border border-blue-500/30 text-sm flex items-center animate-pulse">
                     <Loader2 size={16} className="mr-2 animate-spin" />
-                    {runningScans.length} scan(s) en cours
+                    {runningScans.length} {t('scan_running')}
                  </div>
              )}
              <div className="bg-surface px-4 py-2 rounded-full border border-slate-700 text-sm text-gray-400">
-                {completedScans.length} scans effectués
+                {completedScans.length} {t('scan_completed')}
              </div>
          </div>
       </div>
@@ -43,24 +45,24 @@ const DashboardContent: React.FC<{
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
          {/* Start New Scan CTA - Maps to Form */}
          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl border border-slate-700 hover:border-primary/50 transition-all shadow-lg group">
-            <h2 className="text-xl font-bold text-white mb-2">Démarrer une analyse</h2>
-            <p className="text-gray-400 mb-6">Lancez un nouveau test de sécurité sur votre infrastructure.</p>
+            <h2 className="text-xl font-bold text-white mb-2">{t('start_analysis_title')}</h2>
+            <p className="text-gray-400 mb-6">{t('start_analysis_desc')}</p>
             <button 
                onClick={() => navigate('/new-scan')}
                className="w-full bg-primary/10 text-primary border border-primary hover:bg-primary hover:text-white py-3 rounded-lg font-semibold transition-all"
             >
-               Nouveau Scan
+               {t('btn_new_scan')}
             </button>
          </div>
 
          {/* Recent Activity Mini-View */}
          <div className="bg-surface p-6 rounded-xl border border-slate-700">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-               <Clock className="mr-2" size={20} /> Activité Récente
+               <Clock className="mr-2" size={20} /> {t('recent_activity')}
             </h2>
             <div className="space-y-3">
                {completedScans.length === 0 ? (
-                  <p className="text-gray-500 text-sm">Aucun historique disponible.</p>
+                  <p className="text-gray-500 text-sm">{t('no_history')}</p>
                ) : (
                   completedScans.slice(0, 4).map(scan => (
                      <div 
@@ -93,7 +95,7 @@ const DashboardContent: React.FC<{
                <span className="text-gray-400 text-xs uppercase tracking-widest mb-1">Module</span>
                <span className="text-lg font-bold text-white">{tool}</span>
                <span className="text-xs text-green-500 mt-1 flex items-center">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span> Actif
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span> {t('module_active')}
                </span>
             </div>
          ))}
@@ -103,9 +105,10 @@ const DashboardContent: React.FC<{
 };
 
 const NewScanPage: React.FC<{ onStartScan: (r: ScanRequest) => void, isScanning: boolean }> = ({ onStartScan, isScanning }) => {
+   const { t } = useLanguage();
    return (
       <div className="max-w-3xl mx-auto">
-         <h1 className="text-3xl font-bold text-white mb-8">Nouveau Scan de Sécurité</h1>
+         <h1 className="text-3xl font-bold text-white mb-8">{t('new_scan')}</h1>
          <ScannerForm onStartScan={onStartScan} isScanning={isScanning} />
       </div>
    );
@@ -113,6 +116,7 @@ const NewScanPage: React.FC<{ onStartScan: (r: ScanRequest) => void, isScanning:
 
 const ReportPageWrapper = ({ scans }: { scans: ScanResult[] }) => {
    const navigate = useNavigate();
+   const { t } = useLanguage();
    // Simple ID retrieval from path for this demo structure
    const [id, setId] = useState<string | null>(null);
 
@@ -139,11 +143,11 @@ const ReportPageWrapper = ({ scans }: { scans: ScanResult[] }) => {
             onClick={() => navigate('/history')} 
             className="mb-6 text-gray-400 hover:text-white text-sm flex items-center"
          >
-            ← Retour à l'historique
+            ← {t('history')}
          </button>
          <div className="flex items-center justify-between mb-8">
             <div>
-               <h1 className="text-3xl font-bold text-white mb-2">Rapport de Sécurité</h1>
+               <h1 className="text-3xl font-bold text-white mb-2">{t('btn_report')}</h1>
                <p className="text-gray-400 font-mono">
                   {scan.projectName && <span className="text-primary font-bold mr-2">[{scan.projectName}]</span>}
                   {scan.targetUrl} • {new Date(scan.timestamp).toLocaleString()}
@@ -154,7 +158,7 @@ const ReportPageWrapper = ({ scans }: { scans: ScanResult[] }) => {
                scan.overallScore > 75 ? 'border-green-500 text-green-500' : 'border-red-500 text-red-500'
             }`}>
                {scan.status === 'running' && <Loader2 size={16} className="animate-spin" />}
-               <span>État: {scan.status === 'completed' ? 'Terminé' : scan.status === 'failed' ? 'Échoué' : 'En cours'}</span>
+               <span>{t('table_status')}: {scan.status === 'completed' ? t('status_completed') : scan.status === 'failed' ? t('status_failed') : t('status_running')}</span>
             </div>
          </div>
          {scan.status === 'completed' ? (
@@ -162,7 +166,7 @@ const ReportPageWrapper = ({ scans }: { scans: ScanResult[] }) => {
          ) : (
              <div className="bg-surface rounded-xl border border-slate-700 p-12 text-center">
                  <Loader2 size={48} className="mx-auto text-primary animate-spin mb-4" />
-                 <h2 className="text-xl font-bold text-white">Analyse en cours...</h2>
+                 <h2 className="text-xl font-bold text-white">{t('btn_scanning')}</h2>
                  <p className="text-gray-400 mt-2">Veuillez patienter pendant que nous scannons la cible.</p>
              </div>
          )}
@@ -172,6 +176,7 @@ const ReportPageWrapper = ({ scans }: { scans: ScanResult[] }) => {
 
 const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({ scans, onRefresh }) => {
    const navigate = useNavigate();
+   const { t } = useLanguage();
    const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
    useEffect(() => {
@@ -200,7 +205,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
    return (
       <div className="animate-fade-in">
          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-white">Historique des Scans</h1>
+            <h1 className="text-3xl font-bold text-white">{t('history_title')}</h1>
             <button 
                 onClick={onRefresh}
                 className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-gray-400 hover:text-white transition-colors"
@@ -215,19 +220,19 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                <thead className="bg-slate-900 border-b border-slate-700">
                   <tr>
                      <th className="p-4 w-12 text-center text-gray-500"></th>
-                     <th className="p-4 text-gray-400 font-medium text-sm w-1/6">Cible</th>
-                     <th className="p-4 text-gray-400 font-medium text-sm w-1/6">Date</th>
-                     <th className="p-4 text-gray-400 font-medium text-sm w-1/12">État</th>
-                     <th className="p-4 text-gray-400 font-medium text-sm w-1/4">Analyse IA</th>
-                     <th className="p-4 text-gray-400 font-medium text-sm w-24 text-center">Score</th>
-                     <th className="p-4 text-gray-400 font-medium text-sm w-24 text-center">Failles</th>
-                     <th className="p-4 text-gray-400 font-medium text-sm text-right">Actions</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm w-1/6">{t('table_target')}</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm w-1/6">{t('table_date')}</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm w-1/12">{t('table_status')}</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm w-1/4">{t('table_ai')}</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm w-24 text-center">{t('table_score')}</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm w-24 text-center">{t('table_vulns')}</th>
+                     <th className="p-4 text-gray-400 font-medium text-sm text-right">{t('table_actions')}</th>
                   </tr>
                </thead>
                <tbody>
                   {scans.length === 0 ? (
                      <tr>
-                        <td colSpan={8} className="p-8 text-center text-gray-500">Aucun scan enregistré.</td>
+                        <td colSpan={8} className="p-8 text-center text-gray-500">{t('no_history')}</td>
                      </tr>
                   ) : (
                      scans.slice().reverse().map((scan) => (
@@ -256,15 +261,15 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                               <td className="p-4">
                                   {scan.status === 'completed' ? (
                                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-500 border border-green-500/20">
-                                          Terminé
+                                          {t('status_completed')}
                                       </span>
                                   ) : scan.status === 'failed' ? (
                                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">
-                                          Échoué
+                                          {t('status_failed')}
                                       </span>
                                   ) : (
                                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                          <Loader2 size={10} className="mr-1 animate-spin" /> En cours
+                                          <Loader2 size={10} className="mr-1 animate-spin" /> {t('status_running')}
                                       </span>
                                   )}
                               </td>
@@ -293,7 +298,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                     }}
                                     className="text-primary hover:text-emerald-400 text-sm font-medium"
                                  >
-                                    Rapport
+                                    {t('btn_report')}
                                  </button>
                               </td>
                            </tr>
@@ -307,7 +312,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                        {/* Column 1: Tools Used */}
                                        <div className="p-6 space-y-3">
                                           <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center mb-4">
-                                             <Wrench size={14} className="mr-2" /> Outils Utilisés
+                                             <Wrench size={14} className="mr-2" /> {t('tools_used')}
                                           </h4>
                                           {scan.toolsUsed && scan.toolsUsed.length > 0 ? (
                                               <div className="flex flex-wrap gap-2">
@@ -325,7 +330,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                        {/* Column 2: Open Ports Summary */}
                                        <div className="p-6 space-y-3">
                                           <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
-                                              <Server size={14} className="mr-2" /> Services & Ports
+                                              <Server size={14} className="mr-2" /> {t('services_ports')}
                                           </h4>
                                           {scan.openPorts.length > 0 ? (
                                              <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
@@ -357,7 +362,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                        <div className="p-6">
                                           <div className="flex justify-between items-center mb-4">
                                               <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center">
-                                                  <AlertTriangle size={14} className="mr-2" /> Vulnérabilités Critiques
+                                                  <AlertTriangle size={14} className="mr-2" /> {t('crit_vulns')}
                                               </h4>
                                               <button 
                                                   onClick={(e) => {
@@ -366,7 +371,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                                   }}
                                                   className="text-xs text-primary hover:underline flex items-center"
                                               >
-                                                  Voir tout <ArrowRight size={10} className="ml-1" />
+                                                  {t('view_all')} <ArrowRight size={10} className="ml-1" />
                                               </button>
                                           </div>
                                           {scan.vulnerabilities.length > 0 ? (
@@ -394,7 +399,7 @@ const HistoryPage: React.FC<{ scans: ScanResult[], onRefresh: () => void }> = ({
                                           ) : (
                                              <div className="flex flex-col items-center justify-center h-full text-gray-500">
                                                  <ShieldCheck size={24} className="mb-2 opacity-50" />
-                                                 <p className="text-sm">Aucune vulnérabilité.</p>
+                                                 <p className="text-sm">{t('no_vulns')}</p>
                                              </div>
                                           )}
                                        </div>
@@ -506,17 +511,19 @@ const App = () => {
   };
 
   return (
-    <HashRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<DashboardContent scans={scans} onStartScan={handleStartScan} isScanning={isScanning} />} />
-          <Route path="/new-scan" element={<NewScanPage onStartScan={handleStartScan} isScanning={isScanning} />} />
-          <Route path="/report/:id" element={<ReportPageWrapper scans={scans} />} />
-          <Route path="/history" element={<HistoryPage scans={scans} onRefresh={refreshScans} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </HashRouter>
+    <LanguageProvider>
+      <HashRouter>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<DashboardContent scans={scans} onStartScan={handleStartScan} isScanning={isScanning} />} />
+            <Route path="/new-scan" element={<NewScanPage onStartScan={handleStartScan} isScanning={isScanning} />} />
+            <Route path="/report/:id" element={<ReportPageWrapper scans={scans} />} />
+            <Route path="/history" element={<HistoryPage scans={scans} onRefresh={refreshScans} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      </HashRouter>
+    </LanguageProvider>
   );
 };
 

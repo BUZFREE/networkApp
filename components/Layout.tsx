@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Shield, Activity, List, Menu, X, LayoutDashboard, Youtube } from 'lucide-react';
+import { Shield, Activity, List, Menu, X, LayoutDashboard, Youtube, Globe } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,12 +10,13 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setSidebarOpen] = React.useState(false);
+  const { t, language, setLanguage, dir } = useLanguage();
   const location = useLocation();
 
   const navItems = [
-    { name: 'Tableau de bord', path: '/', icon: <LayoutDashboard size={20} /> },
-    { name: 'Nouveau Scan', path: '/new-scan', icon: <Activity size={20} /> },
-    { name: 'Historique', path: '/history', icon: <List size={20} /> },
+    { name: t('dashboard'), path: '/', icon: <LayoutDashboard size={20} /> },
+    { name: t('new_scan'), path: '/new-scan', icon: <Activity size={20} /> },
+    { name: t('history'), path: '/history', icon: <List size={20} /> },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -31,13 +33,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 z-50 h-screen w-64 bg-surface border-r border-slate-700 transition-transform duration-300 ease-in-out flex flex-col
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed top-0 z-50 h-screen w-64 bg-surface border-slate-700 transition-transform duration-300 ease-in-out flex flex-col
+        ${dir === 'rtl' ? 'border-l right-0' : 'border-r left-0'}
+        ${isSidebarOpen ? 'translate-x-0' : (dir === 'rtl' ? 'translate-x-full' : '-translate-x-full')}
         md:translate-x-0 md:static
       `}>
         {/* Sidebar Header */}
         <div className="h-16 flex items-center px-6 border-b border-slate-700 flex-shrink-0">
-          <Shield className="text-primary mr-3" size={28} />
+          <Shield className={`text-primary ${dir === 'rtl' ? 'ml-3' : 'mr-3'}`} size={28} />
           <span className="text-xl font-bold tracking-wider text-white">SecuScan Pro</span>
         </div>
 
@@ -60,21 +63,62 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           ))}
         </nav>
 
-        {/* Sidebar Footer & Social */}
-        <div className="p-4 border-t border-slate-700 bg-surface flex-shrink-0">
+        {/* Sidebar Footer & Language Switcher */}
+        <div className="p-4 border-t border-slate-700 bg-surface flex-shrink-0 space-y-4">
+          
+          {/* Language Switcher */}
+          <div className="bg-slate-900 rounded-lg p-2 border border-slate-700">
+             <p className="text-xs text-gray-500 uppercase font-bold mb-2 px-2 flex items-center">
+                <Globe size={12} className={`mr-1 ${dir === 'rtl' ? 'ml-1' : ''}`}/> 
+                {language === 'ar' ? 'اللغة' : 'Langue / Language'}
+             </p>
+             <div className="flex space-x-1">
+                <button 
+                  onClick={() => setLanguage('fr')}
+                  className={`flex-1 py-1 px-1 rounded text-[10px] font-medium transition-all flex items-center justify-center ${
+                    language === 'fr' 
+                      ? 'bg-primary text-white shadow-md' 
+                      : 'bg-slate-800 text-gray-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  🇫🇷 FR
+                </button>
+                <button 
+                  onClick={() => setLanguage('en')}
+                  className={`flex-1 py-1 px-1 rounded text-[10px] font-medium transition-all flex items-center justify-center ${
+                    language === 'en' 
+                      ? 'bg-primary text-white shadow-md' 
+                      : 'bg-slate-800 text-gray-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  🇬🇧 EN
+                </button>
+                <button 
+                  onClick={() => setLanguage('ar')}
+                  className={`flex-1 py-1 px-1 rounded text-[10px] font-medium transition-all flex items-center justify-center ${
+                    language === 'ar' 
+                      ? 'bg-primary text-white shadow-md' 
+                      : 'bg-slate-800 text-gray-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  🇸🇦 AR
+                </button>
+             </div>
+          </div>
+
           <a 
             href="https://www.youtube.com/@issaadhassani" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-colors border border-transparent hover:border-red-500/20"
+            className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-colors border border-transparent hover:border-red-500/20"
           >
             <Youtube size={20} />
-            <span className="font-medium">Tutoriels & Démo</span>
+            <span className="font-medium text-sm">{t('tutorials')}</span>
           </a>
 
-          <div className="flex items-center space-x-3 text-sm text-gray-500 px-4 pt-2">
+          <div className="flex items-center space-x-3 text-sm text-gray-500 px-4">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span>Système Opérationnel</span>
+            <span className="text-xs">{t('os_system')}</span>
           </div>
         </div>
       </aside>

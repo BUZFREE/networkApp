@@ -1,5 +1,4 @@
 
-
 export enum Severity {
   CRITICAL = 'CRITIQUE',
   HIGH = 'ÉLEVÉE',
@@ -293,4 +292,5 @@ export interface ScanRequest {
   target: string;
   tools: ToolType[];
   intensity: 'quick' | 'normal' | 'deep';
+  language: 'fr' | 'en' | 'ar';
 }

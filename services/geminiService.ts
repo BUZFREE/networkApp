@@ -38,9 +38,17 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
   // Step 1: Fetch Real Data (Hybrid Approach)
   const { realIp, geoData } = await fetchRealNetworkData(request.target);
 
+  const langInstruction = request.language === 'ar' 
+    ? "IMPORTANT: Provide all text content (aiAnalysis, description, remediation, vulnerability names) in ARABIC. Use professional cybersecurity terminology in Arabic."
+    : request.language === 'fr'
+    ? "IMPORTANT: Provide all text content (aiAnalysis, description, remediation) in FRENCH."
+    : "IMPORTANT: Provide all text content in ENGLISH.";
+
   const systemInstruction = `
     You are 'SecuScan Pro', an elite cybersecurity and infrastructure monitoring engine.
     Your goal is to generate a JSON report that simulates a deep technical audit of a target: ${request.target}.
+    
+    ${langInstruction}
     
     REAL DATA DETECTED (USE THIS):
     - Resolved IP: ${realIp}
@@ -54,6 +62,7 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
     1. SECURITY (Nmap, Nikto, OpenVAS):
        - Find realistic open ports and vulnerabilities.
        - If 'OpenVAS' is selected, include at least 3-5 vulnerabilities.
+       - Translate vulnerability names and descriptions to the target language.
 
     2. INFRASTRUCTURE & HEALTH (Server Health):
        - ALWAYS Generate 'serverHealth' object (CPU/RAM).
@@ -70,6 +79,7 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
        - If 'Selenium Automation' is selected, Generate 'seleniumReport'.
        - Create 2-3 scenarios (Login, Search, Contact).
        - Include specific steps with Status 'pass' or 'fail'.
+       - Translate scenario names and step descriptions.
 
     5. LOAD TESTING (APACHE JMETER):
        - If 'Apache JMeter' is selected, YOU MUST Generate 'jmeterReport'.
