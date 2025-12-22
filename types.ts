@@ -7,6 +7,102 @@ export enum Severity {
   INFO = 'INFO'
 }
 
+export enum DeviceStatus {
+  ACTIVE = 'Active',
+  OFFLINE = 'Offline',
+  STAGING = 'Staging',
+  RESERVED = 'Reserved',
+  DECOMMISSIONED = 'Decommissioned',
+  FAILED = 'Failed',
+  INVENTORY = 'Inventory'
+}
+
+export enum DeviceRole {
+  CORE_SWITCH = 'Core Switch',
+  ACCESS_SWITCH = 'Access Switch',
+  DISTRIBUTION_SWITCH = 'Distribution Switch',
+  ROUTER = 'Router',
+  FIREWALL = 'Firewall',
+  SERVER = 'Server',
+  IOT = 'IoT Device',
+  WORKSTATION = 'Workstation',
+  PDU = 'PDU',
+  CONSOLE_SERVER = 'Console Server'
+}
+
+export interface NetworkDevice {
+  id: string;
+  name: string;
+  primaryIp: string;
+  macAddress: string;
+  status: DeviceStatus;
+  role: DeviceRole;
+  site: string;
+  location?: string;
+  rack?: string;
+  manufacturer: string;
+  deviceType: string;
+  platform?: string;
+  lastSeen: string;
+  serial?: string;
+}
+
+export interface IPPrefix {
+  id: string;
+  prefix: string;
+  status: 'active' | 'reserved' | 'container' | 'deprecated';
+  vlan?: number;
+  vrf?: string;
+  role?: string;
+  site?: string;
+  description: string;
+  utilization: number;
+}
+
+export interface IPAddress {
+  id: string;
+  address: string;
+  status: 'active' | 'reserved' | 'deprecated' | 'dhcp';
+  dnsName?: string;
+  description?: string;
+  assignedTo?: string; // Device ID or VM ID
+}
+
+export interface VLAN {
+  id: string;
+  vid: number;
+  name: string;
+  status: 'active' | 'reserved' | 'deprecated';
+  site?: string;
+  group?: string;
+  description?: string;
+}
+
+export interface VirtualMachine {
+  id: string;
+  name: string;
+  status: DeviceStatus;
+  cluster: string;
+  role: DeviceRole;
+  vcpus?: number;
+  memoryGb?: number;
+  diskGb?: number;
+  primaryIp: string;
+  site: string;
+}
+
+export interface Site {
+  id: string;
+  name: string;
+  slug: string;
+  status: 'active' | 'planned' | 'retired';
+  region?: string;
+  facility?: string;
+  deviceCount: number;
+  vmCount: number;
+  prefixCount: number;
+}
+
 export enum ToolType {
   NMAP = 'Nmap',
   NIKTO = 'Nikto',
@@ -56,7 +152,12 @@ export interface ConnectedAsset {
   location: string;
 }
 
-// Performance & Web Vitals
+export interface PerformanceReport {
+  overallScore: number;
+  metrics: PerformanceMetric[];
+  opportunities: PerformanceOpportunity[];
+}
+
 export interface PerformanceMetric {
   name: string;
   value: string;
@@ -70,13 +171,6 @@ export interface PerformanceOpportunity {
   description: string;
 }
 
-export interface PerformanceReport {
-  overallScore: number;
-  metrics: PerformanceMetric[];
-  opportunities: PerformanceOpportunity[];
-}
-
-// Infrastructure & Monitoring Interfaces
 export interface ServerHealth {
   cpuUsage: number;
   ramUsage: number;
@@ -89,8 +183,6 @@ export interface NetworkStats {
   packetLoss: number;
   dnsProvider: string;
   traceroute: string[];
-  whoisRegistrar?: string;
-  whoisDate?: string;
 }
 
 export interface SecurityHeader {
@@ -107,7 +199,6 @@ export interface LoadTestPoint {
   errors: number;
 }
 
-// New: Topology & Fingerprinting
 export interface TopologyNode {
   id: string;
   label: string;
@@ -121,45 +212,41 @@ export interface TopologyLink {
 }
 
 export interface DeviceFingerprint {
-  os: string; // e.g., "Ubuntu 22.04 LTS"
+  os: string;
   osFamily: 'linux' | 'windows' | 'ios' | 'android' | 'other';
   deviceType: 'server' | 'firewall' | 'router' | 'iot';
-  confidence: number; // 0-100
+  confidence: number;
   details: string;
 }
 
 export interface GlobalPingRegion {
-  region: string; // e.g., "North America"
-  location: string; // e.g., "New York, USA"
+  region: string;
+  location: string;
   latency: number;
   status: 'online' | 'degraded' | 'offline';
 }
 
-// Selenium / Functional Testing
-export interface SeleniumStep {
-  stepNumber: number;
-  action: string; // e.g., "Click Login Button"
-  expectedResult: string;
-  actualResult: string;
-  status: 'pass' | 'fail' | 'warning';
-  screenshotStub?: boolean; // To simulate a screenshot placeholder
-}
-
 export interface SeleniumScenario {
-  name: string; // e.g. "User Login Flow"
+  name: string;
   description: string;
   duration: string;
   status: 'pass' | 'fail';
   steps: SeleniumStep[];
 }
 
-// Apache JMeter Data
-export interface JMeterSample {
-    timestamp: string; // relative time e.g. "0s", "10s"
-    activeThreads: number;
-    latency: number; // ms
-    throughput: number; // req/sec
-    errorRate: number; // percentage
+export interface SeleniumStep {
+  stepNumber: number;
+  action: string;
+  expectedResult: string;
+  actualResult: string;
+  status: 'pass' | 'fail' | 'warning';
+}
+
+export interface JMeterReport {
+    testPlanName: string;
+    duration: string;
+    summary: JMeterSummary;
+    samples: JMeterSample[];
 }
 
 export interface JMeterSummary {
@@ -170,85 +257,41 @@ export interface JMeterSummary {
     stdDev: number;
     errorPct: number;
     throughput: number;
-    p90: number; // 90th percentile
+    p90: number;
     p95: number;
     p99: number;
 }
 
-export interface JMeterReport {
-    testPlanName: string;
-    duration: string;
-    summary: JMeterSummary;
-    samples: JMeterSample[];
+export interface JMeterSample {
+    timestamp: string;
+    activeThreads: number;
+    latency: number;
+    throughput: number;
+    errorRate: number;
 }
 
-// Wireshark / Network Packets
 export interface NetworkPacket {
     no: number;
     time: string;
     source: string;
     destination: string;
-    protocol: string; // TCP, UDP, HTTP, TLSv1.3, DNS
+    protocol: string;
     length: number;
     info: string;
-    hexDump?: string; // Simulated raw data
-    details?: {
-        frame: string;
-        ethernet: string;
-        ip: string;
-        transport: string; // TCP/UDP segment info
-        application?: string; // HTTP/DNS info
-    };
-}
-
-// New: DPI / Forensics
-export interface ProtocolStat {
-    protocol: string;
-    percent: number;
-    packets: number;
-    bytes: number;
-}
-
-export interface ExpertInfo {
-    severity: 'Chat' | 'Note' | 'Warning' | 'Error';
-    group: string; // e.g. Sequence, Checksum
-    protocol: string;
-    summary: string;
-}
-
-export interface ReconstructedStream {
-    id: string;
-    title: string; // e.g. "Stream #4 (HTTP POST)"
-    content: string; // ASCII content
-    tags: string[]; // e.g. ["SQLi Detected", "Plaintext"]
+    details?: any;
 }
 
 export interface ForensicsReport {
-    protocolStats: ProtocolStat[];
-    expertIssues: ExpertInfo[];
-    reconstructedStreams: ReconstructedStream[];
-}
-
-// New: IDS / IPS (Snort/Suricata)
-export interface IdsAlert {
-    timestamp: string;
-    sid: string; // Signature ID e.g. "1:2001219"
-    signature: string; // e.g. "ET POLICY PE EXE or DLL Windows file download"
-    classification: string; // e.g. "Potential Corporate Privacy Violation"
-    priority: number; // 1 (High), 2 (Medium), 3 (Low)
-    protocol: string;
-    sourceIp: string;
-    sourcePort: number;
-    destIp: string;
-    destPort: number;
-    action: 'allowed' | 'blocked' | 'logged';
+    protocolStats: any[];
+    expertIssues: any[];
+    reconstructedStreams: any[];
 }
 
 export interface IdsReport {
     totalAlerts: number;
     alertsByPriority: { high: number, medium: number, low: number };
     blockedCount: number;
-    alerts: IdsAlert[];
+    alerts: any[];
 }
 
 export interface ScanResult {
@@ -264,26 +307,18 @@ export interface ScanResult {
   connectedAssets: ConnectedAsset[];
   vulnerabilities: Vulnerability[];
   aiAnalysis: string;
-  
-  // Optional Modules
   performanceReport?: PerformanceReport;
   serverHealth?: ServerHealth;
   networkStats?: NetworkStats;
   securityHeaders?: SecurityHeader[];
   loadTestResults?: LoadTestPoint[];
-  
-  // New Modules
   topology?: { nodes: TopologyNode[], links: TopologyLink[] };
   deviceFingerprint?: DeviceFingerprint;
   globalPing?: GlobalPingRegion[];
   seleniumReport?: SeleniumScenario[];
   jmeterReport?: JMeterReport;
   packetCapture?: NetworkPacket[];
-  
-  // Forensics
   forensicsReport?: ForensicsReport;
-  
-  // IDS/IPS
   idsReport?: IdsReport;
 }
 

@@ -12,14 +12,13 @@ interface LanguageContextType {
 
 const translations = {
   fr: {
-    // Layout
     'dashboard': 'Tableau de bord',
     'new_scan': 'Nouveau Scan',
     'history': 'Historique',
+    'inventory': 'Inventaire Réseau',
+    'video_promo': 'Vidéo Promo',
     'tutorials': 'Tutoriels & Démo',
     'os_system': 'Système Opérationnel',
-    
-    // Dashboard
     'dashboard_title': 'Tableau de Bord',
     'scan_running': 'scan(s) en cours',
     'scan_completed': 'scans effectués',
@@ -29,8 +28,17 @@ const translations = {
     'recent_activity': 'Activité Récente',
     'no_history': 'Aucun historique disponible.',
     'module_active': 'Actif',
-    
-    // Form
+    'inventory_title': 'Inventaire des Équipements (IPAM)',
+    'inv_name': 'Nom',
+    'inv_ip': 'Adresse IP',
+    'inv_mac': 'MAC',
+    'inv_status': 'Statut',
+    'inv_role': 'Rôle',
+    'inv_site': 'Site',
+    'inv_platform': 'Plateforme',
+    'inv_last_seen': 'Vu le',
+    'inv_actions': 'Actions',
+    'inv_no_devices': 'Aucun périphérique inventorié.',
     'config_scan': 'Configurer le Scan',
     'project_name': 'Nom du Projet (Optionnel)',
     'project_placeholder': 'ex: Audit Client X - Q3',
@@ -43,8 +51,6 @@ const translations = {
     'intensity_deep': 'Approfondi',
     'btn_start_scan': 'Lancer le Scan Complet',
     'btn_scanning': 'Analyse IA en cours...',
-    
-    // History
     'history_title': 'Historique des Scans',
     'table_target': 'Cible',
     'table_date': 'Date',
@@ -62,8 +68,6 @@ const translations = {
     'crit_vulns': 'Vulnérabilités Critiques',
     'view_all': 'Voir tout',
     'no_vulns': 'Aucune vulnérabilité.',
-    
-    // Tool Descriptions
     'desc_nmap': 'Découverte réseau et ports ouverts',
     'desc_ids': 'Détection d\'intrusion, Signatures & Alertes',
     'desc_nikto': 'Scanner de serveur web et config',
@@ -85,8 +89,6 @@ const translations = {
     'desc_jmeter': 'Test de charge & Stress Test (Apache JMeter)',
     'desc_wireshark': 'Capture de paquets & Analyse protocolaire',
     'desc_forensics': 'Expert Info, Reconstruction de Flux & Stats',
-
-    // Result Tabs
     'tab_overview': 'Vue d\'ensemble',
     'tab_infrastructure': 'Infrastructure',
     'tab_network': 'Réseau',
@@ -97,14 +99,13 @@ const translations = {
     'tab_ids': 'IDS / IPS',
   },
   en: {
-    // Layout
     'dashboard': 'Dashboard',
     'new_scan': 'New Scan',
     'history': 'History',
+    'inventory': 'Network Inventory',
+    'video_promo': 'Promo Video',
     'tutorials': 'Tutorials & Demo',
     'os_system': 'Operational System',
-    
-    // Dashboard
     'dashboard_title': 'Dashboard',
     'scan_running': 'scan(s) running',
     'scan_completed': 'scans completed',
@@ -114,8 +115,17 @@ const translations = {
     'recent_activity': 'Recent Activity',
     'no_history': 'No history available.',
     'module_active': 'Active',
-    
-    // Form
+    'inventory_title': 'Device Inventory (IPAM)',
+    'inv_name': 'Name',
+    'inv_ip': 'IP Address',
+    'inv_mac': 'MAC',
+    'inv_status': 'Status',
+    'inv_role': 'Role',
+    'inv_site': 'Site',
+    'inv_platform': 'Platform',
+    'inv_last_seen': 'Last Seen',
+    'inv_actions': 'Actions',
+    'inv_no_devices': 'No devices inventoried.',
     'config_scan': 'Configure Scan',
     'project_name': 'Project Name (Optional)',
     'project_placeholder': 'e.g., Audit Client X - Q3',
@@ -128,8 +138,6 @@ const translations = {
     'intensity_deep': 'Deep',
     'btn_start_scan': 'Start Full Scan',
     'btn_scanning': 'AI Analysis in progress...',
-    
-    // History
     'history_title': 'Scan History',
     'table_target': 'Target',
     'table_date': 'Date',
@@ -147,8 +155,6 @@ const translations = {
     'crit_vulns': 'Critical Vulnerabilities',
     'view_all': 'View all',
     'no_vulns': 'No vulnerabilities.',
-    
-    // Tool Descriptions
     'desc_nmap': 'Network discovery and open ports',
     'desc_ids': 'Intrusion Detection, Signatures & Alerts',
     'desc_nikto': 'Web server scanner & config',
@@ -170,8 +176,6 @@ const translations = {
     'desc_jmeter': 'Load Testing & Stress Test (Apache JMeter)',
     'desc_wireshark': 'Packet Capture & Protocol Analysis',
     'desc_forensics': 'Expert Info, Stream Reconstruction & Stats',
-
-    // Result Tabs
     'tab_overview': 'Overview',
     'tab_infrastructure': 'Infrastructure',
     'tab_network': 'Network',
@@ -182,14 +186,13 @@ const translations = {
     'tab_ids': 'IDS / IPS',
   },
   ar: {
-    // Layout
     'dashboard': 'لوحة التحكم',
     'new_scan': 'فحص جديد',
     'history': 'سجل الفحوصات',
+    'inventory': 'جرد الشبكة',
+    'video_promo': 'فيديو ترويجي',
     'tutorials': 'شروحات وعرض توضيحي',
     'os_system': 'النظام التشغيلي',
-    
-    // Dashboard
     'dashboard_title': 'لوحة القيادة',
     'scan_running': 'فحوصات قيد التشغيل',
     'scan_completed': 'فحوصات مكتملة',
@@ -199,8 +202,17 @@ const translations = {
     'recent_activity': 'النشاط الأخير',
     'no_history': 'لا يوجد سجل متاح.',
     'module_active': 'نشط',
-    
-    // Form
+    'inventory_title': 'جرد الأجهزة (IPAM)',
+    'inv_name': 'الاسم',
+    'inv_ip': 'عنوان IP',
+    'inv_mac': 'MAC',
+    'inv_status': 'الحالة',
+    'inv_role': 'الدور',
+    'inv_site': 'الموقع',
+    'inv_platform': 'المنصة',
+    'inv_last_seen': 'آخر ظهور',
+    'inv_actions': 'إجراءات',
+    'inv_no_devices': 'لا توجد أجهزة في الجرد.',
     'config_scan': 'إعدادات الفحص',
     'project_name': 'اسم المشروع (اختياري)',
     'project_placeholder': 'مثال: تدقيق العميل س - الربع الثالث',
@@ -213,8 +225,6 @@ const translations = {
     'intensity_deep': 'عميق',
     'btn_start_scan': 'بدء الفحص الشامل',
     'btn_scanning': 'تحليل الذكاء الاصطناعي جارٍ...',
-    
-    // History
     'history_title': 'سجل الفحوصات الأمنية',
     'table_target': 'الهدف',
     'table_date': 'التاريخ',
@@ -232,8 +242,6 @@ const translations = {
     'crit_vulns': 'ثغرات أمنية حرجة',
     'view_all': 'عرض الكل',
     'no_vulns': 'لا توجد ثغرات.',
-    
-    // Tool Descriptions
     'desc_nmap': 'اكتشاف الشبكة والمنافذ المفتوحة',
     'desc_ids': 'كشف التسلل، التوقيعات والتنبيهات',
     'desc_nikto': 'فحص خادم الويب والتكوين',
@@ -253,10 +261,8 @@ const translations = {
     'desc_global_ping': 'التوافر العالمي والكمون',
     'desc_selenium': 'الأتمتة الشاملة واختبار النماذج',
     'desc_jmeter': 'اختبار الحمل والضغط (Apache JMeter)',
-    'desc_wireshark': 'التقاط الحزم وتحليل البروتوكولات',
+    'desc_wireshark': 'التقاط الحزم وتحليل البروتولات',
     'desc_forensics': 'معلومات الخبراء، إعادة بناء التدفق والإحصائيات',
-
-    // Result Tabs
     'tab_overview': 'نظرة عامة',
     'tab_infrastructure': 'البنية التحتية',
     'tab_network': 'الشبكة',
@@ -275,7 +281,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [dir, setDir] = useState<'ltr' | 'rtl'>('ltr');
 
   useEffect(() => {
-    // Update direction based on language
     const newDir = language === 'ar' ? 'rtl' : 'ltr';
     setDir(newDir);
     document.documentElement.dir = newDir;
