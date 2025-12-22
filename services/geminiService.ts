@@ -58,7 +58,7 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
 
     The user has selected these tools: ${toolsString}.
 
-    GENERATE DATA FOR THE FOLLOWING SECTIONS BASED ON SELECTED TOOLS:
+    GENERATE DATA FOR THE FOLLOWING SECTIONS BASED ON SELECTED TOOLS. DO NOT LEAVE EMPTY FIELDS if the tool is selected.
 
     1. SECURITY (Nmap, Nikto, OpenVAS):
        - Find realistic open ports and vulnerabilities.
@@ -70,21 +70,20 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
        - ALWAYS Generate 'loadTestResults' array for charts (latency vs req/sec).
 
     3. NETWORK & TOPOLOGY (NetBox-style):
-       - Generate 'topology' object.
+       - ALWAYS Generate 'topology' object with 'nodes' (Internet, Firewall, Load Balancer, Target) and 'links'.
        - Generate 'deviceFingerprint' (OS, Device Type).
        - Generate 'connectedAssets'.
-       - IMPORTANT: In the AI analysis, suggest where these assets would fit in a NetBox inventory (e.g. "Asset X should be placed in Site HQ, VLAN 100, Rack A12").
 
     4. FUNCTIONAL & AUTOMATION:
        - If 'Selenium' selected: Generate 'seleniumReport'.
        - If 'JMeter' selected: Generate 'jmeterReport'.
 
     5. PACKET ANALYSIS & FORENSICS (WIRESHARK & DPI):
-       - Generate packetCapture and forensicsReport if tools selected.
-       - Use Deep Packet Inspection (DPI) signatures to identify specific software versions.
+       - ALWAYS Generate 'packetCapture' array with at least 10 realistic packets (TCP/UDP/HTTP).
+       - Generate 'forensicsReport' with protocolStats.
 
     6. INTRUSION DETECTION (SNORT / SURICATA):
-       - Generate idsReport with realistic alerts if tool selected.
+       - Generate 'idsReport' with realistic alerts if tool selected.
 
     IMPORTANT: Be technical, concise, and realistic. Return ONLY raw JSON.
   `;
@@ -162,23 +161,22 @@ export const performSimulatedScan = async (request: ScanRequest): Promise<Partia
       },
       globalPing: { type: Type.ARRAY, nullable: true, items: { type: Type.OBJECT, properties: { region: { type: Type.STRING }, location: { type: Type.STRING }, latency: { type: Type.NUMBER }, status: { type: Type.STRING } } } },
       deviceFingerprint: { type: Type.OBJECT, nullable: true, properties: { os: { type: Type.STRING }, deviceType: { type: Type.STRING }, confidence: { type: Type.NUMBER } } },
-      seleniumReport: { type: Type.ARRAY, nullable: true, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, status: { type: Type.STRING }, steps: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { action: { type: Type.STRING }, status: { type: Type.STRING } } } } } } },
+      seleniumReport: { type: Type.ARRAY, nullable: true, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, status: { type: Type.STRING }, steps: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { action: { type: Type.STRING }, status: { type: Type.STRING }, expectedResult: {type: Type.STRING}, actualResult: {type: Type.STRING} } } } } } },
       jmeterReport: {
           type: Type.OBJECT,
           nullable: true,
           properties: {
-              summary: { type: Type.OBJECT, properties: { totalSamples: { type: Type.NUMBER }, averageLatency: { type: Type.NUMBER }, throughput: { type: Type.NUMBER } } },
+              summary: { type: Type.OBJECT, properties: { totalSamples: { type: Type.NUMBER }, averageLatency: { type: Type.NUMBER }, throughput: { type: Type.NUMBER }, maxLatency: {type: Type.NUMBER}, errorPct: {type: Type.NUMBER}, p99: {type: Type.NUMBER} } },
               samples: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { timestamp: { type: Type.STRING }, latency: { type: Type.NUMBER } } } }
           }
       },
-      packetCapture: { type: Type.ARRAY, nullable: true, items: { type: Type.OBJECT, properties: { no: { type: Type.NUMBER }, source: { type: Type.STRING }, protocol: { type: Type.STRING }, info: { type: Type.STRING } } } },
+      packetCapture: { type: Type.ARRAY, nullable: true, items: { type: Type.OBJECT, properties: { no: { type: Type.NUMBER }, time: { type: Type.STRING }, source: { type: Type.STRING }, destination: {type: Type.STRING}, protocol: { type: Type.STRING }, info: { type: Type.STRING } } } },
       forensicsReport: {
           type: Type.OBJECT,
           nullable: true,
           properties: {
               protocolStats: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { protocol: { type: Type.STRING }, percent: { type: Type.NUMBER } } } },
               expertIssues: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { severity: { type: Type.STRING }, summary: { type: Type.STRING } } } },
-              reconstructedStreams: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, content: { type: Type.STRING } } } }
           }
       },
       idsReport: {
